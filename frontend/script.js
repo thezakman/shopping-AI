@@ -1,4 +1,4 @@
-const apiUrl = 'https://shopping-ai-backend.onrender.com';
+const apiUrl = 'https://shopping-ai.onrender.com';
 
 document.addEventListener('DOMContentLoaded', () => {
     const itemInput = document.getElementById('itemInput');
