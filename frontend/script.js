@@ -195,9 +195,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <small class="item-date">Adicionado em: ${item.date_added}</small>
                 </div>
             </div>
-            <div>
-                <button class="btn btn-secondary btn-sm me-2" title="Editar Item">✏️</button>
-                <button class="btn btn-danger btn-sm" title="Remover Item">🗑️</button>
+            <div class="action-buttons">
+                <button class="btn" title="Editar Item"><i class="fas fa-edit"></i></button>
+                <button class="btn" title="Remover Item"><i class="fas fa-trash"></i></button>
             </div>
         `;
         const [checkbox, editButton, removeButton] = li.querySelectorAll('input, button');

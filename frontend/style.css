@@ -13,6 +13,7 @@ h1 {
     justify-content: space-between;
     padding: 1rem;
     transition: background-color 0.3s;
+    border-radius: 8px;
 }
 
 .list-group-item:hover {
@@ -45,6 +46,44 @@ h1 {
     color: #6c757d;
 }
 
+/* Botões de Ação */
+.list-group-item .action-buttons {
+    display: flex;
+    gap: 10px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.list-group-item:hover .action-buttons {
+    opacity: 1;
+}
+
+.action-buttons .btn {
+    border: none;
+    background: none;
+    color: #6c757d;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.action-buttons .btn:hover {
+    color: #343a40;
+}
+
+/* Botão Flat no Input */
+#addItemButton {
+    background-color: #007bff;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+#addItemButton:hover {
+    background-color: #0056b3;
+}
+
 #autocomplete-list {
     max-height: 200px;
     overflow-y: auto;
@@ -59,13 +98,15 @@ h1 {
     z-index: 1000;
 }
 
+/* Responsividade */
 @media (max-width: 576px) {
     .list-group-item {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    .list-group-item div:last-child {
-        margin-top: 10px;
+    .list-group-item .action-buttons {
+        justify-content: flex-end;
+        width: 100%;
     }
 }
