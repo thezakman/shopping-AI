@@ -171,18 +171,74 @@ def add_item():
     return jsonify(new_item), 201
 
 
+# Lista estática de combinações frequentes, organizadas por categorias de alimentos
+combinations = {
+    "leite": ["café", "açúcar", "achocolatado", "biscoitos"],
+    "pão": ["manteiga", "geleia", "queijo", "presunto"],
+    "arroz": ["feijão", "farinha", "óleo"],
+    "macarrão": ["molho de tomate", "queijo parmesão", "azeitona"],
+    "frango": ["batata", "cenoura", "temperos", "alho"],
+    # Adicione mais categorias de acordo com suas necessidades
+}
+
+# Função para gerar combinações frequentes com base no histórico
+def generate_frequent_combinations(data):
+    frequent_combinations = []
+
+    # Contagem de co-ocorrência de itens
+    item_occurrences = {}
+    for item in data['items']:
+        item_name = item['name'].lower()
+        if item_name in item_occurrences:
+            item_occurrences[item_name] += 1
+        else:
+            item_occurrences[item_name] = 1
+
+    # Gerar sugestões com base em combinações estáticas e co-ocorrências dinâmicas
+    for item, count in item_occurrences.items():
+        if item in combinations:
+            # Adicionar os itens que costumam ser comprados com este item
+            frequent_combinations.extend(combinations[item])
+
+        # Adicionar lógica de co-ocorrência
+        for other_item, other_count in item_occurrences.items():
+            if item != other_item and (count > 2 or other_count > 2):
+                # Itens que aparecem juntos com frequência
+                frequent_combinations.append(other_item)
+
+    # Remover duplicatas e limitar a 10 sugestões
+    return list(set(frequent_combinations))[:10]
+
+# Modificando o endpoint para retornar combinações frequentes
 @app.route('/suggestions_based_on_history', methods=['GET'])
 def suggestions_based_on_history():
     try:
         data = load_data()
-        # Sort items by count (descending order)
+
+        # Itens mais frequentes
         sorted_items = sorted(data['items'], key=lambda x: x.get('count', 0), reverse=True)
-        # Limit suggestions to top 5 items
         suggestions = sorted_items[:5]
-        return jsonify(suggestions), 200
+
+        # Gerar combinações frequentes
+        frequent_combinations = generate_frequent_combinations(data)
+
+        # Combinar sugestões frequentes com combinações
+        final_suggestions = []
+        for item in suggestions:
+            final_suggestions.append(item)
+            # Adicionar as combinações frequentes
+            if item['name'].lower() in combinations:
+                final_suggestions.extend(combinations[item['name'].lower()])
+
+        # Adicionar combinações frequentes baseadas em co-ocorrências
+        final_suggestions.extend(frequent_combinations)
+
+        # Limitar a 10 sugestões no total
+        return jsonify(final_suggestions[:10]), 200
     except Exception as e:
         logger.error(f"Error in /suggestions_based_on_history: {e}")
         return jsonify({"message": "Erro interno no servidor."}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)

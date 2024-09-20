@@ -270,21 +270,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     }
 
-    document.getElementById('generateListButton').addEventListener('click', () => {
-        fetch(`${apiUrl}/suggestions_based_on_history`)
-            .then(response => response.json())
-            .then(data => {
-                itemsList.innerHTML = ''; // Limpa a lista atual
-                data.forEach(item => {
-                    const li = createListItem(item); // Cria um item da lista
-                    itemsList.appendChild(li);
+        // Função para buscar sugestões com base no histórico
+        document.getElementById('generateListButton').addEventListener('click', () => {
+            fetch(`${apiUrl}/suggestions_based_on_history`)
+                .then(response => response.json())
+                .then(data => {
+                    itemsList.innerHTML = ''; // Limpa a lista atual
+                    data.forEach(item => {
+                        const li = createListItem(item); // Cria um item da lista
+                        itemsList.appendChild(li);
+                    });
+                    showNotification('Lista gerada com base no histórico!', 'success');
+                })
+                .catch(error => {
+                    showNotification('Erro ao gerar a lista.', 'danger');
+                    console.error('Erro:', error);
                 });
-                showNotification('Lista gerada com base no histórico!', 'success');
-            })
-            .catch(error => {
-                showNotification('Erro ao gerar a lista.', 'danger');
-                console.error('Erro:', error);
-            });
-    });
+        });
+    
+        function fetchSuggestions() {
+            const query = itemInput.value.trim().toLowerCase();
+            if (query.length === 0) {
+                clearAutocomplete();
+                return;
+            }
+    
+            fetch(`${apiUrl}/suggestions?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(suggestions => {
+                    showAutocomplete(suggestions);
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar sugestões:', error);
+                });
+        }
+    
     
 });
