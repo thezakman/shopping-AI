@@ -89,7 +89,132 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Função para gerar a nuvem de tags
+    // Remover item da lista
+    function removeItem(id, element) {
+        fetch(`${apiUrl}/items/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200) {
+                element.remove();
+                showNotification('Item removido com sucesso!', 'success');
+            } else {
+                showNotification(body.message || 'Erro ao remover item.', 'danger');
+            }
+        })
+        .catch(error => {
+            showNotification('Erro ao remover item.', 'danger');
+            console.error('Erro:', error);
+        });
+    }
+
+    // Alternar estado "comprado/não comprado" de um item
+    function togglePurchased(id, checkbox) {
+        fetch(`${apiUrl}/toggle_purchased/${id}`, {
+            method: 'PATCH'
+        })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200) {
+                const itemElement = checkbox.closest('.list-group-item');
+                if (body.purchased) {
+                    checkbox.checked = true;
+                    itemElement.classList.add('purchased');
+                } else {
+                    checkbox.checked = false;
+                    itemElement.classList.remove('purchased');
+                }
+                showNotification('Status do item atualizado!', 'success');
+            } else {
+                showNotification(body.message || 'Erro ao atualizar status.', 'danger');
+            }
+        })
+        .catch(error => {
+            showNotification('Erro ao atualizar status.', 'danger');
+            console.error('Erro:', error);
+        });
+    }
+
+    // Editar item da lista
+    function editItem(id, currentName, currentObservation) {
+        currentEditItemId = id;
+        editItemInput.value = currentName;
+        editItemObservation.value = currentObservation;
+        editItemModal.show();
+    }
+
+    // Salvar edições no item
+    saveEditButton.addEventListener('click', () => {
+        const newName = editItemInput.value.trim();
+        const newObservation = editItemObservation.value.trim();
+        if (!newName) {
+            showNotification('Nome do item não pode ser vazio.', 'warning');
+            return;
+        }
+
+        fetch(`${apiUrl}/items/${currentEditItemId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: newName, observation: newObservation})
+        })
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200) {
+                const itemElement = document.getElementById(`item-${body.id}`);
+                if (itemElement) {
+                    itemElement.querySelector('.item-name').textContent = body.name;
+                    itemElement.querySelector('.item-date').textContent = `Adicionado em: ${body.date_added}`;
+                    itemElement.querySelector('.item-observation').textContent = body.observation;
+                }
+                showNotification('Item atualizado com sucesso!', 'success');
+                editItemModal.hide();
+            } else {
+                showNotification(body.message || 'Erro ao atualizar item.', 'danger');
+            }
+        })
+        .catch(error => {
+            showNotification('Erro ao atualizar item.', 'danger');
+            console.error('Erro:', error);
+        });
+    });
+
+    // Criar um item da lista
+    function createListItem(item) {
+        const li = document.createElement('li');
+        li.className = `list-group-item ${item.purchased ? 'purchased' : ''}`;
+        li.id = `item-${item.id}`;
+        li.innerHTML = `
+            <div class="item-info">
+                <input type="checkbox" ${item.purchased ? 'checked' : ''} title="Marcar como Comprado">
+                <div class="item-details">
+                    <strong class="item-name">${capitalize(item.name)}</strong>
+                    ${item.observation ? `<span class="item-observation">${capitalize(item.observation)}</span>` : ''}
+                    <small class="item-date">Adicionado em: ${item.date_added}</small>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn edit-btn" title="Editar Item"><i class="fas fa-edit"></i></button>
+                <button class="btn remove-btn" title="Remover Item"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+        const checkbox = li.querySelector('input[type="checkbox"]');
+        const editButton = li.querySelector('.edit-btn');
+        const removeButton = li.querySelector('.remove-btn');
+        checkbox.addEventListener('change', () => togglePurchased(item.id, checkbox));
+
+        editButton.addEventListener('click', () => {
+            editItem(item.id, item.name, item.observation);
+        });
+
+        removeButton.addEventListener('click', () => {
+            removeItem(item.id, li);
+        });
+
+        return li;
+    }
+
+    // Função para buscar sugestões baseadas no histórico e nos itens destacados
     document.getElementById('generateListButton').addEventListener('click', () => {
         fetch(`${apiUrl}/dynamic_suggestions`)
             .then(response => response.json())
@@ -100,9 +225,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Gerar a nuvem de tags
                 data.forEach(item => {
                     const span = document.createElement('span');
-                    span.textContent = capitalize(item.name);
-                    span.className = getTagClass(item.name, item.occurrences); // Define o tamanho da tag com base na frequência
-                    span.addEventListener('click', () => addItem(item.name, ''));
+                    span.textContent = capitalize(item);
+                    span.className = getTagClass(item); // Define o tamanho da tag
+                    span.addEventListener('click', () => {
+                        addItem(item, '');
+                    });
                     tagCloud.appendChild(span);
                 });
     
@@ -113,18 +240,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Erro:', error);
             });
     });
-
+    
     // Função para definir o tamanho da tag com base na frequência
-    function getTagClass(itemName, occurrences) {
-        if (occurrences > 10) {
-            return 'tag-large';
-        } else if (occurrences > 5) {
-            return 'tag-medium';
-        } else {
-            return 'tag-small';
+    function getTagClass(item) {
+        // Isso pode ser ajustado com base nos dados de frequência de uso
+        const size = Math.floor(Math.random() * 3); // Simula tamanhos diferentes
+        switch(size) {
+            case 0: return 'tag-small';
+            case 1: return 'tag-medium';
+            case 2: return 'tag-large';
+            default: return 'tag-small';
         }
     }
-
+    
     // Função de autocomplete ao buscar por sugestão
     function fetchSuggestions() {
         const query = itemInput.value.trim().toLowerCase();

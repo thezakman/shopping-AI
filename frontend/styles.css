@@ -50,6 +50,7 @@ h1 {
     max-height: 200px;
     overflow-y: auto;
     z-index: 1001;
+    width: 100%;  /* Isso garante que o autocomplete se ajuste ao tamanho do container */
 }
 
 #autocomplete-list .list-group-item {
@@ -81,8 +82,8 @@ h1 {
 }
 
 .list-group-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transform: translateY(-4px);  /* Maior elevação ao passar o mouse */
+    box-shadow: 0 6px 8px rgba(0,0,0,0.1);
 }
 
 .item-info {
@@ -161,6 +162,10 @@ h1 {
     color: #0056b3;
 }
 
+.action-buttons .btn:active {
+    transform: scale(0.95);  /* Feedback de clique */
+}
+
 #notification {
     position: fixed;
     top: 20px;
@@ -169,6 +174,9 @@ h1 {
     z-index: 2000;
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    padding: 1rem;
+    opacity: 0.95;
+    transition: opacity 0.3s ease;
 }
 
 .modal-content {
@@ -181,6 +189,11 @@ h1 {
 
 .modal-footer {
     border-top: none;
+}
+
+.modal-dialog {
+    max-width: 100%;  /* Ajusta a largura do modal em telas menores */
+    margin: 1rem; /* Melhor espaçamento em telas pequenas */
 }
 
 #tagCloud span {
@@ -196,6 +209,7 @@ h1 {
 
 #tagCloud span:hover {
     background-color: #0056b3;
+    transform: scale(1.1);
 }
 
 .tag-small {
