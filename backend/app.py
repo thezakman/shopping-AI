@@ -106,8 +106,8 @@ def generate_frequent_combinations(data):
 
 
 # Função para retornar sugestões dinâmicas com base no histórico e nos itens destacados
-@app.route('/suggestions_dynamic', methods=['GET'])
-def suggestions_dynamic():
+@app.route('/dynamic_suggestions', methods=['GET'])
+def dynamic_suggestions():
     try:
         logger.info("Carregando dados do histórico do usuário...")
         # Carregar dados do histórico do usuário

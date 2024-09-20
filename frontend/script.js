@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Função para buscar sugestões baseadas no histórico e nos itens destacados
     document.getElementById('generateListButton').addEventListener('click', () => {
-        fetch(`${apiUrl}/suggestions_dynamic`)
+        fetch(`${apiUrl}/dynamic_suggestions`)
             .then(response => response.json())
             .then(data => {
                 itemsList.innerHTML = ''; // Limpa a lista atual
@@ -231,6 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Erro:', error);
             });
     });
+    
 
     // Função de autocomplete ao buscar por sugestão
     function fetchSuggestions() {
