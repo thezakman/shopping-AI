@@ -269,4 +269,22 @@ document.addEventListener('DOMContentLoaded', () => {
             notification.classList.add('d-none');
         }, 3000);
     }
+
+    document.getElementById('generateListButton').addEventListener('click', () => {
+        fetch(`${apiUrl}/suggestions_based_on_history`)
+            .then(response => response.json())
+            .then(data => {
+                itemsList.innerHTML = ''; // Limpa a lista atual
+                data.forEach(item => {
+                    const li = createListItem(item); // Cria um item da lista
+                    itemsList.appendChild(li);
+                });
+                showNotification('Lista gerada com base no histórico!', 'success');
+            })
+            .catch(error => {
+                showNotification('Erro ao gerar a lista.', 'danger');
+                console.error('Erro:', error);
+            });
+    });
+    
 });

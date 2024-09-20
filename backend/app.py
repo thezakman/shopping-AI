@@ -143,5 +143,41 @@ def suggestions():
         logger.error(f"Erro no endpoint /suggestions: {e}")
         return jsonify({"message": "Erro interno no servidor."}), 500
 
+@app.route('/add_item', methods=['POST'])
+def add_item():
+    data = request.get_json()
+    item = data.get('item', '').strip().lower()
+    observation = data.get('observation', '').strip()
+
+    if not item:
+        return jsonify({"message": "Nome do item é obrigatório."}), 400
+
+    # Verificar se o item já existe
+    for existing_item in data['items']:
+        if existing_item['name'].lower() == item:
+            existing_item['count'] += 1  # Incrementar contador
+            return jsonify(existing_item), 200
+
+    new_item = {
+        'id': len(data['items']) + 1,
+        'name': item,
+        'observation': observation,
+        'date_added': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'count': 1,  # Contador inicializado em 1
+        'purchased': False
+    }
+    data['items'].append(new_item)
+    save_data(data)
+    return jsonify(new_item), 201
+
+
+@app.route('/suggestions_based_on_history', methods=['GET'])
+def suggestions_based_on_history():
+    data = load_data()
+    # Ordenar os itens pelo número de vezes que foram adicionados
+    most_frequent_items = sorted(data['items'], key=lambda x: x['count'], reverse=True)
+    # Retornar os 5 itens mais frequentes
+    return jsonify(most_frequent_items[:5]), 200
+
 if __name__ == '__main__':
     app.run(debug=True)
