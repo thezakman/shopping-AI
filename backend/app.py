@@ -11,7 +11,7 @@ CORS(app, resources={r"/*": {"origins": "https://shopping-ai-1.onrender.com"}})
 
 DATA_FILE = 'data.json'
 COMMON_ITEMS_FILE = 'common_items.json'
-ZONASUL_URL = 'https://www.zonasul.com.br/ofertas
+ZONASUL_URL = 'https://www.zonasul.com.br/ofertas'
 
 # Configuração de Logging
 logging.basicConfig(level=logging.INFO)
