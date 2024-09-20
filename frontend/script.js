@@ -1,5 +1,3 @@
-// frontend/script.js
-
 const apiUrl = 'https://shopping-ai.onrender.com'; // URL do backend no Render
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -11,7 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Elementos do Modal de Edição
     const editItemModal = new bootstrap.Modal(document.getElementById('editItemModal'));
-    const editItemInput = document.getElementById('editItemInput');
+    const editItemNameInput = document.getElementById('editItemName');
+    const editItemObservationInput = document.getElementById('editItemObservation');
     const saveEditButton = document.getElementById('saveEditButton');
     let currentEditItemId = null;
 
@@ -22,7 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     addItemButton.addEventListener('click', () => {
         const item = itemInput.value.trim();
         if (item) {
-            addItem(item);
+            const observation = ''; // Inicialmente sem observação
+            addItem(item, observation);
         }
     });
 
@@ -32,7 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const item = itemInput.value.trim();
             if (item) {
-                addItem(item);
+                const observation = ''; // Inicialmente sem observação
+                addItem(item, observation);
             }
         }
     });
@@ -65,11 +66,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Função para adicionar item
-    function addItem(item) {
+    function addItem(item, observation) {
         fetch(`${apiUrl}/items`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({item})
+            body: JSON.stringify({item, observation})
         })
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
@@ -137,15 +138,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Função para editar item
-    function editItem(id, currentName) {
+    function editItem(id, currentName, currentObservation) {
         currentEditItemId = id;
-        editItemInput.value = currentName;
+        editItemNameInput.value = currentName;
+        editItemObservationInput.value = currentObservation;
         editItemModal.show();
     }
 
     // Salvar edição de item
     saveEditButton.addEventListener('click', () => {
-        const newName = editItemInput.value.trim();
+        const newName = editItemNameInput.value.trim();
+        const newObservation = editItemObservationInput.value.trim();
         if (!newName) {
             showNotification('Nome do item não pode ser vazio.', 'warning');
             return;
@@ -154,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(`${apiUrl}/items/${currentEditItemId}`, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name: newName})
+            body: JSON.stringify({name: newName, observation: newObservation})
         })
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
@@ -162,8 +165,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Atualizar o item na lista
                 const itemElement = document.getElementById(`item-${body.id}`);
                 if (itemElement) {
-                    itemElement.querySelector('.item-name').textContent = body.name;
+                    itemElement.querySelector('.item-name').textContent = capitalize(body.name);
                     itemElement.querySelector('.item-date').textContent = `Adicionado em: ${body.date_added}`;
+                    itemElement.querySelector('.item-observation').textContent = `Observação: ${body.observation}`;
                 }
                 showNotification('Item atualizado com sucesso!', 'success');
                 editItemModal.hide();
@@ -189,9 +193,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <strong class="item-name ${item.purchased ? 'purchased' : ''}">${capitalize(item.name)}</strong>
                     <br>
                     <small class="item-date">Adicionado em: ${item.date_added}</small>
+                    <br>
+                    <small class="item-observation">Observação: ${item.observation || 'Nenhuma'}</small>
                 </div>
             </div>
-            <div>
+            <div class="item-actions">
                 <button class="btn btn-secondary btn-sm me-2" title="Editar Item">✏️</button>
                 <button class="btn btn-danger btn-sm" title="Remover Item">🗑️</button>
             </div>
@@ -205,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Evento para editar item
         editButton.addEventListener('click', () => {
-            editItem(item.id, item.name);
+            editItem(item.id, item.name, item.observation);
         });
 
         // Evento para remover item
@@ -225,7 +231,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         fetch(`${apiUrl}/suggestions?q=${encodeURIComponent(query)}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar sugestões.');
+                }
+                return response.json();
+            })
             .then(suggestions => {
                 showAutocomplete(suggestions);
             })
@@ -270,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Função para capitalizar strings
     function capitalize(str) {
+        if (!str) return '';
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
 

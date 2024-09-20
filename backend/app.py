@@ -6,7 +6,7 @@ import os
 import logging
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://shopping-ai.onrender.com"}})
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 DATA_FILE = 'data.json'
 COMMON_ITEMS_FILE = 'common_items.json'
@@ -21,16 +21,26 @@ def load_data():
             return json.load(f)
     except FileNotFoundError:
         return {"items": []}
+    except json.JSONDecodeError as e:
+        logger.error(f"Erro ao decodificar {DATA_FILE}: {e}")
+        return {"items": []}
 
 def save_data(data):
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+    try:
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"Erro ao salvar dados: {e}")
 
 def load_common_items():
     try:
         with open(COMMON_ITEMS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
+        logger.error(f"Arquivo {COMMON_ITEMS_FILE} não encontrado.")
+        return []
+    except json.JSONDecodeError as e:
+        logger.error(f"Erro ao decodificar {COMMON_ITEMS_FILE}: {e}")
         return []
 
 @app.route('/')
@@ -46,6 +56,7 @@ def get_or_add_items():
 
     if request.method == 'POST':
         item = request.json.get('item', '').strip()
+        observation = request.json.get('observation', '').strip()
         if not item:
             return jsonify({"message": "Nome do item é obrigatório."}), 400
 
@@ -58,7 +69,8 @@ def get_or_add_items():
             'id': len(data['items']) + 1,
             'name': item,
             'date_added': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            'purchased': False
+            'purchased': False,
+            'observation': observation
         }
         data['items'].append(new_item)
         save_data(data)
@@ -75,6 +87,7 @@ def update_or_delete_item(item_id):
 
     if request.method == 'PUT':
         new_name = request.json.get('name', '').strip()
+        new_observation = request.json.get('observation', '').strip()
         if not new_name:
             return jsonify({"message": "Nome do item é obrigatório."}), 400
 
@@ -84,6 +97,7 @@ def update_or_delete_item(item_id):
                 return jsonify({"message": "Outro item com esse nome já existe."}), 400
 
         item['name'] = new_name
+        item['observation'] = new_observation
         save_data(data)
         logger.info(f"Item atualizado: ID {item_id} para '{new_name}'")
         return jsonify(item), 200
@@ -110,21 +124,25 @@ def toggle_purchased(item_id):
 
 @app.route('/suggestions', methods=['GET'])
 def suggestions():
-    data = load_data()
-    common_items = load_common_items()
-    item_names = [item['name'] for item in data['items']]
-    
-    # Combine itens comuns com os adicionados pelo usuário
-    combined_items = list(set(common_items + item_names))
-    
-    query = request.args.get('q', '').strip().lower()
-    if not query:
-        return jsonify([])
+    try:
+        data = load_data()
+        common_items = load_common_items()
+        item_names = [item['name'] for item in data['items']]
+        
+        # Combine itens comuns com os adicionados pelo usuário
+        combined_items = list(set(common_items + item_names))
+        
+        query = request.args.get('q', '').strip().lower()
+        if not query:
+            return jsonify([])
 
-    # Filtrar sugestões que começam com a query
-    filtered_suggestions = [item for item in combined_items if item.lower().startswith(query)]
-    # Limitar a 10 sugestões
-    return jsonify(filtered_suggestions[:10])
+        # Filtrar sugestões que começam com a query
+        filtered_suggestions = [item for item in combined_items if item.lower().startswith(query)]
+        # Limitar a 10 sugestões
+        return jsonify(filtered_suggestions[:10])
+    except Exception as e:
+        logger.error(f"Erro no endpoint /suggestions: {e}")
+        return jsonify({"message": "Erro interno do servidor."}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
