@@ -1,4 +1,4 @@
-const apiUrl = 'https://shopping-ai.onrender.com';
+const apiUrl = 'https://shopping-ai.onrender.com'; // URL do backend correto
 
 document.addEventListener('DOMContentLoaded', () => {
     const itemInput = document.getElementById('itemInput');
@@ -7,41 +7,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const autocompleteList = document.getElementById('autocomplete-list');
     const notification = document.getElementById('notification');
 
+    // Elementos do Modal de Edição
     const editItemModal = new bootstrap.Modal(document.getElementById('editItemModal'));
     const editItemInput = document.getElementById('editItemInput');
     const editItemObservation = document.getElementById('editItemObservation');
     const saveEditButton = document.getElementById('saveEditButton');
     let currentEditItemId = null;
 
+    // Carregar itens ao iniciar
     loadItems();
 
+    // Adicionar item ao clicar no botão
     addItemButton.addEventListener('click', () => {
         const item = itemInput.value.trim();
-        const observation = '';
+        const observation = ''; // Observação vazia ao adicionar via input principal
         if (item) {
             addItem(item, observation);
         }
     });
 
+    // Adicionar item ao pressionar Enter
     itemInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             const item = itemInput.value.trim();
-            const observation = '';
+            const observation = ''; // Observação vazia ao adicionar via input principal
             if (item) {
                 addItem(item, observation);
             }
         }
     });
 
+    // Autocomplete ao digitar
     itemInput.addEventListener('input', debounce(fetchSuggestions, 300));
 
+    // Fechar autocomplete ao clicar fora
     document.addEventListener('click', (e) => {
         if (e.target !== itemInput) {
             clearAutocomplete();
         }
     });
 
+    // Função para carregar itens
     function loadItems() {
         fetch(`${apiUrl}/items`)
             .then(response => response.json())
@@ -58,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
+    // Função para adicionar item
     function addItem(item, observation) {
         fetch(`${apiUrl}/items`, {
             method: 'POST',
@@ -68,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(({status, body}) => {
             if (status === 201) {
                 const li = createListItem(body);
-                itemsList.insertBefore(li, itemsList.firstChild);
+                itemsList.appendChild(li);
                 showNotification('Item adicionado com sucesso!', 'success');
                 itemInput.value = '';
                 clearAutocomplete();
@@ -83,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Função para remover item
     function removeItem(id, element) {
         fetch(`${apiUrl}/items/${id}`, {
             method: 'DELETE'
@@ -90,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
             if (status === 200) {
-                element.remove();
+                element.parentElement.remove();
                 showNotification('Item removido com sucesso!', 'success');
             } else {
                 showNotification(body.message || 'Erro ao remover item.', 'danger');
@@ -102,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Função para alternar status de comprado
     function togglePurchased(id, checkbox) {
         fetch(`${apiUrl}/toggle_purchased/${id}`, {
             method: 'PATCH'
@@ -109,13 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
             if (status === 200) {
-                const listItem = checkbox.closest('.list-group-item');
                 if (body.purchased) {
                     checkbox.checked = true;
-                    listItem.classList.add('purchased');
+                    checkbox.parentElement.parentElement.querySelector('.item-name').classList.add('purchased');
                 } else {
                     checkbox.checked = false;
-                    listItem.classList.remove('purchased');
+                    checkbox.parentElement.parentElement.querySelector('.item-name').classList.remove('purchased');
                 }
                 showNotification('Status do item atualizado!', 'success');
             } else {
@@ -128,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Função para editar item
     function editItem(id, currentName, currentObservation) {
         currentEditItemId = id;
         editItemInput.value = currentName;
@@ -135,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editItemModal.show();
     }
 
+    // Salvar edição de item
     saveEditButton.addEventListener('click', () => {
         const newName = editItemInput.value.trim();
         const newObservation = editItemObservation.value.trim();
@@ -151,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
             if (status === 200) {
+                // Atualizar o item na lista
                 const itemElement = document.getElementById(`item-${body.id}`);
                 if (itemElement) {
                     itemElement.querySelector('.item-name').textContent = body.name;
@@ -169,38 +181,38 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Função para criar elemento da lista
     function createListItem(item) {
         const li = document.createElement('li');
-        li.className = `list-group-item ${item.purchased ? 'purchased' : ''}`;
+        li.className = 'list-group-item';
         li.id = `item-${item.id}`;
         li.innerHTML = `
             <div class="item-info">
-                <input type="checkbox" class="custom-checkbox" ${item.purchased ? 'checked' : ''} title="Marcar como Comprado">
+                <input type="checkbox" ${item.purchased ? 'checked' : ''} title="Marcar como Comprado">
                 <div class="item-details">
-                    <span class="item-name">${capitalize(item.name)}</span>
+                    <strong class="item-name ${item.purchased ? 'purchased' : ''}">${capitalize(item.name)}</strong>
                     ${item.observation ? `<span class="item-observation">${capitalize(item.observation)}</span>` : ''}
                     <small class="item-date">Adicionado em: ${item.date_added}</small>
                 </div>
             </div>
-            <div class="item-actions">
-                <button class="btn btn-outline-secondary btn-action" title="Editar Item">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-outline-danger btn-action" title="Remover Item">
-                    <i class="fas fa-trash"></i>
-                </button>
+            <div>
+                <button class="btn btn-secondary btn-sm me-2" title="Editar Item">✏️</button>
+                <button class="btn btn-danger btn-sm" title="Remover Item">🗑️</button>
             </div>
         `;
         const [checkbox, editButton, removeButton] = li.querySelectorAll('input, button');
 
+        // Evento para alternar status de comprado
         checkbox.addEventListener('change', () => {
             togglePurchased(item.id, checkbox);
         });
 
+        // Evento para editar item
         editButton.addEventListener('click', () => {
             editItem(item.id, item.name, item.observation);
         });
 
+        // Evento para remover item
         removeButton.addEventListener('click', () => {
             removeItem(item.id, li);
         });
@@ -208,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return li;
     }
 
+    // Função para buscar sugestões
     function fetchSuggestions() {
         const query = itemInput.value.trim().toLowerCase();
         if (query.length === 0) {
@@ -230,7 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
-function showAutocomplete(suggestions) {
+    // Função para mostrar autocomplete
+    function showAutocomplete(suggestions) {
         clearAutocomplete();
         if (suggestions.length === 0) return;
 
@@ -247,10 +261,12 @@ function showAutocomplete(suggestions) {
         });
     }
 
+    // Função para limpar autocomplete
     function clearAutocomplete() {
         autocompleteList.innerHTML = '';
     }
 
+    // Função debounce para otimizar chamadas de autocomplete
     function debounce(func, delay) {
         let debounceTimer;
         return function() {
@@ -261,11 +277,13 @@ function showAutocomplete(suggestions) {
         };
     }
 
+    // Função para capitalizar strings
     function capitalize(str) {
         if (!str) return '';
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
+    // Função para mostrar notificações
     function showNotification(message, type) {
         notification.className = `alert alert-${type}`;
         notification.textContent = message;
