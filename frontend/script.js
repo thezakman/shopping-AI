@@ -1,6 +1,6 @@
 // frontend/script.js
 
-const apiUrl = 'https://shopping-ai-backend.onrender.com'; // URL do backend no Render
+const apiUrl = 'https://shopping-ai.onrender.com'; // URL do backend no Render
 
 document.addEventListener('DOMContentLoaded', () => {
     const itemInput = document.getElementById('itemInput');
