@@ -118,29 +118,29 @@ def dynamic_suggestions():
         logger.info("Gerando sugestões com base no histórico...")
         sorted_items = sorted(data['items'], key=lambda x: x.get('count', 0), reverse=True)
         suggestions = sorted_items[:5]
-        logger.info(f"Sugestões baseadas no histórico: {suggestions}")
 
         # Gerar combinações frequentes
         logger.info("Gerando combinações frequentes...")
         frequent_combinations = generate_frequent_combinations(data)
-        logger.info(f"Combinações frequentes: {frequent_combinations}")
 
         # Pegar itens destacados do site Zona Sul
         logger.info("Obtendo itens destacados do Zona Sul...")
         featured_items = get_featured_items()
         logger.info(f"Itens destacados: {featured_items}")
 
-        # Combinar sugestões do histórico e combinações frequentes com os itens destacados
+        # Combinar sugestões
         final_suggestions = []
-        final_suggestions.extend([item['name'] for item in suggestions])
-        final_suggestions.extend(frequent_combinations)
-        final_suggestions.extend(featured_items)
+        final_suggestions.extend([{'name': item['name'], 'occurrences': item['count']} for item in suggestions])
+        final_suggestions.extend([{'name': item, 'occurrences': 1} for item in frequent_combinations])
+        final_suggestions.extend([{'name': item, 'occurrences': 1} for item in featured_items])
 
         # Remover duplicatas e limitar a 10 sugestões no total
-        return jsonify(list(set(final_suggestions))[:10]), 200
+        unique_suggestions = {item['name']: item for item in final_suggestions}
+        return jsonify(list(unique_suggestions.values())[:10]), 200
     except Exception as e:
         logger.error(f"Erro ao gerar sugestões dinâmicas: {e}")
         return jsonify({"message": "Erro interno no servidor."}), 500
+
 
 
 # Função para obter ou adicionar itens
