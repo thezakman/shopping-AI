@@ -13,11 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveEditButton = document.getElementById('saveEditButton');
     let currentEditItemId = null;
 
+    let cloudVisible = false;  // Variável para armazenar o estado da nuvem (visível ou não)
+
     // Carrega os itens na lista ao carregar a página
     loadItems();
-
-    // Gera a nuvem de tags ao carregar a página
-    generateTagCloud();
 
     // Adiciona novo item ao clicar no botão "Adicionar"
     addItemButton.addEventListener('click', () => {
@@ -37,6 +36,45 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item) {
                 addItem(item, observation);
             }
+        }
+    });
+
+    // Toggle para exibir ou ocultar a nuvem de tags
+    document.getElementById('generateListButton').addEventListener('click', () => {
+        const tagCloud = document.getElementById('tagCloud');
+
+        // Se a nuvem estiver visível, esconda-a
+        if (cloudVisible) {
+            tagCloud.innerHTML = '';  // Limpa a nuvem de tags
+            tagCloud.style.display = 'none';  // Esconde a nuvem
+            showNotification('Nuvem de tags oculta.', 'info');
+            cloudVisible = false;  // Atualiza o estado para indicar que a nuvem está oculta
+        } else {
+            // Se a nuvem não estiver visível, carregue-a e mostre
+            fetch(`${apiUrl}/dynamic_suggestions`)
+                .then(response => response.json())
+                .then(data => {
+                    tagCloud.innerHTML = '';  // Limpa o conteúdo anterior
+                    tagCloud.style.display = 'block';  // Exibe a nuvem
+
+                    // Gerar a nuvem de tags
+                    data.forEach(item => {
+                        const span = document.createElement('span');
+                        span.textContent = capitalize(item.name);  // Exibe o nome do item
+                        span.className = getTagClass(item.occurrences);  // Define o tamanho da tag com base na frequência
+                        span.addEventListener('click', () => {
+                            addItem(item.name, '');  // Permite adicionar o item com um clique
+                        });
+                        tagCloud.appendChild(span);
+                    });
+
+                    showNotification('Nuvem de tags gerada com sucesso!', 'success');
+                    cloudVisible = true;  // Atualiza o estado para indicar que a nuvem está visível
+                })
+                .catch(error => {
+                    showNotification('Erro ao gerar a nuvem de tags.', 'danger');
+                    console.error('Erro:', error);
+                });
         }
     });
 
@@ -67,8 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
             if (status === 201 || status === 200) {
-                loadItems(); // Recarregar a lista de itens
-                generateTagCloud(); // Atualizar a nuvem de tags
+                loadItems();  // Recarregar a lista de itens
+                generateTagCloud();  // Atualizar a nuvem de tags
                 itemInput.value = '';
                 clearAutocomplete();
                 showNotification('Item adicionado com sucesso!', 'success');
@@ -91,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(({status, body}) => {
             if (status === 200) {
                 element.remove();
-                generateTagCloud(); // Atualizar a nuvem de tags
+                generateTagCloud();  // Atualizar a nuvem de tags
                 showNotification('Item removido com sucesso!', 'success');
             } else {
                 showNotification(body.message || 'Erro ao remover item.', 'danger');
@@ -165,13 +203,13 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(response => response.json())
             .then(data => {
                 const tagCloud = document.getElementById('tagCloud');
-                tagCloud.innerHTML = ''; // Limpa a nuvem atual
+                tagCloud.innerHTML = '';  // Limpa a nuvem atual
     
                 // Gerar a nuvem de tags
                 data.forEach(item => {
                     const span = document.createElement('span');
-                    span.textContent = capitalize(item.name); // Adiciona o nome do item
-                    span.className = getTagClass(item.occurrences); // Define o tamanho da tag baseado na frequência
+                    span.textContent = capitalize(item.name);  // Adiciona o nome do item
+                    span.className = getTagClass(item.occurrences);  // Define o tamanho da tag baseado na frequência
                     span.addEventListener('click', () => {
                         addItem(item.name, '');
                     });
@@ -210,6 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Função de autocomplete ao buscar por sugestão
+    itemInput.addEventListener('input', debounce(fetchSuggestions, 300));
+
     function fetchSuggestions() {
         const query = itemInput.value.trim().toLowerCase();
         if (query.length === 0) {
@@ -260,49 +300,4 @@ document.addEventListener('DOMContentLoaded', () => {
             debounceTimer = setTimeout(() => func.apply(context, args), delay);
         };
     }
-
-    // Função de autocomplete ao buscar por sugestão
-itemInput.addEventListener('input', debounce(fetchSuggestions, 300));
-
-function fetchSuggestions() {
-    const query = itemInput.value.trim().toLowerCase();
-    if (query.length === 0) {
-        clearAutocomplete();
-        return;
-    }
-
-    fetch(`${apiUrl}/suggestions?q=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(suggestions => {
-            showAutocomplete(suggestions);
-        })
-        .catch(error => {
-            console.error('Erro ao buscar sugestões:', error);
-        });
-}
-
-    // Exibir a lista de sugestões no autocomplete
-    function showAutocomplete(suggestions) {
-        clearAutocomplete();
-        if (suggestions.length === 0) return;
-    
-        suggestions.forEach(suggestion => {
-            const li = document.createElement('li');
-            li.className = 'list-group-item list-group-item-action';
-            li.textContent = suggestion;
-            li.addEventListener('click', () => {
-                itemInput.value = suggestion;
-                clearAutocomplete();
-                itemInput.focus();
-            });
-            autocompleteList.appendChild(li);
-        });
-    }
-    
-    // Limpar a lista de autocomplete
-    function clearAutocomplete() {
-        autocompleteList.innerHTML = '';
-    }
-
-    
 });
