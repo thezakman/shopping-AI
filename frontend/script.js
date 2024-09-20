@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadItems();
 
+    // Adiciona novo item ao clicar no botão "Adicionar"
     addItemButton.addEventListener('click', () => {
         const item = itemInput.value.trim();
         const observation = '';
@@ -23,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Adiciona novo item ao pressionar "Enter"
     itemInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -34,14 +36,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Autocomplete ao digitar no campo de item
     itemInput.addEventListener('input', debounce(fetchSuggestions, 300));
 
+    // Limpar autocomplete ao clicar fora do campo
     document.addEventListener('click', (e) => {
         if (e.target !== itemInput) {
             clearAutocomplete();
         }
     });
 
+    // Carregar os itens da lista
     function loadItems() {
         fetch(`${apiUrl}/items`)
             .then(response => response.json())
@@ -58,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
+    // Adicionar novo item
     function addItem(item, observation) {
         fetch(`${apiUrl}/items`, {
             method: 'POST',
@@ -83,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Remover item da lista
     function removeItem(id, element) {
         fetch(`${apiUrl}/items/${id}`, {
             method: 'DELETE'
@@ -102,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Alternar estado "comprado/não comprado" de um item
     function togglePurchased(id, checkbox) {
         fetch(`${apiUrl}/toggle_purchased/${id}`, {
             method: 'PATCH'
@@ -128,6 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Editar item da lista
     function editItem(id, currentName, currentObservation) {
         currentEditItemId = id;
         editItemInput.value = currentName;
@@ -135,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editItemModal.show();
     }
 
+    // Salvar edições no item
     saveEditButton.addEventListener('click', () => {
         const newName = editItemInput.value.trim();
         const newObservation = editItemObservation.value.trim();
@@ -169,6 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Criar um item da lista
     function createListItem(item) {
         const li = document.createElement('li');
         li.className = `list-group-item ${item.purchased ? 'purchased' : ''}`;
@@ -203,6 +214,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return li;
     }
 
+    // Função para buscar sugestões baseadas no histórico e nos itens destacados
+    document.getElementById('generateListButton').addEventListener('click', () => {
+        fetch(`${apiUrl}/suggestions_dynamic`)
+            .then(response => response.json())
+            .then(data => {
+                itemsList.innerHTML = ''; // Limpa a lista atual
+                data.forEach(item => {
+                    const li = createListItem({name: item, date_added: new Date().toLocaleString()}); // Cria um item da lista
+                    itemsList.appendChild(li);
+                });
+                showNotification('Lista gerada com base no histórico e destaques!', 'success');
+            })
+            .catch(error => {
+                showNotification('Erro ao gerar a lista.', 'danger');
+                console.error('Erro:', error);
+            });
+    });
+
+    // Função de autocomplete ao buscar por sugestão
     function fetchSuggestions() {
         const query = itemInput.value.trim().toLowerCase();
         if (query.length === 0) {
@@ -211,12 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         fetch(`${apiUrl}/suggestions?q=${encodeURIComponent(query)}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro na requisição de sugestões.');
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(suggestions => {
                 showAutocomplete(suggestions);
             })
@@ -225,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
+    // Exibir a lista de sugestões no autocomplete
     function showAutocomplete(suggestions) {
         clearAutocomplete();
         if (suggestions.length === 0) return;
@@ -242,10 +268,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Limpar a lista de autocomplete
     function clearAutocomplete() {
         autocompleteList.innerHTML = '';
     }
 
+    // Função de debounce para melhorar a performance ao buscar sugestões
     function debounce(func, delay) {
         let debounceTimer;
         return function() {
@@ -256,11 +284,13 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // Função para capitalizar strings
     function capitalize(str) {
         if (!str) return '';
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
+    // Exibir notificação na tela
     function showNotification(message, type) {
         notification.className = `alert alert-${type}`;
         notification.textContent = message;
@@ -269,41 +299,4 @@ document.addEventListener('DOMContentLoaded', () => {
             notification.classList.add('d-none');
         }, 3000);
     }
-
-        // Função para buscar sugestões com base no histórico
-        document.getElementById('generateListButton').addEventListener('click', () => {
-            fetch(`${apiUrl}/suggestions_dynamic`)
-                .then(response => response.json())
-                .then(data => {
-                    itemsList.innerHTML = ''; // Limpa a lista atual
-                    data.forEach(item => {
-                        const li = createListItem({name: item, date_added: new Date().toLocaleString()}); // Cria um item da lista
-                        itemsList.appendChild(li);
-                    });
-                    showNotification('Lista gerada com base no histórico e destaques!', 'success');
-                })
-                .catch(error => {
-                    showNotification('Erro ao gerar a lista.', 'danger');
-                    console.error('Erro:', error);
-                });
-        });        
-    
-        function fetchSuggestions() {
-            const query = itemInput.value.trim().toLowerCase();
-            if (query.length === 0) {
-                clearAutocomplete();
-                return;
-            }
-    
-            fetch(`${apiUrl}/suggestions?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(suggestions => {
-                    showAutocomplete(suggestions);
-                })
-                .catch(error => {
-                    console.error('Erro ao buscar sugestões:', error);
-                });
-        }
-    
-    
 });
