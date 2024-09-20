@@ -1,6 +1,6 @@
 // frontend/script.js
 
-const apiUrl = 'https://shopping-ai.onrender.com'; // URL do backend no Render
+const apiUrl = 'https://shopping-ai-backend.onrender.com'; // URL do backend no Render
 
 document.addEventListener('DOMContentLoaded', () => {
     const itemInput = document.getElementById('itemInput');
@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Função para alternar status de comprado
-    function togglePurchased(id, element) {
+    function togglePurchased(id, checkbox) {
         fetch(`${apiUrl}/toggle_purchased/${id}`, {
             method: 'PATCH'
         })
@@ -119,9 +119,11 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(({status, body}) => {
             if (status === 200) {
                 if (body.purchased) {
-                    element.classList.add('purchased');
+                    checkbox.checked = true;
+                    checkbox.parentElement.parentElement.querySelector('.item-name').classList.add('purchased');
                 } else {
-                    element.classList.remove('purchased');
+                    checkbox.checked = false;
+                    checkbox.parentElement.parentElement.querySelector('.item-name').classList.remove('purchased');
                 }
                 showNotification('Status do item atualizado!', 'success');
             } else {
@@ -181,24 +183,24 @@ document.addEventListener('DOMContentLoaded', () => {
         li.className = 'list-group-item';
         li.id = `item-${item.id}`;
         li.innerHTML = `
-            <div class="${item.purchased ? 'purchased' : ''}">
-                <strong class="item-name">${capitalize(item.name)}</strong>
-                <br>
-                <small class="item-date">Adicionado em: ${item.date_added}</small>
+            <div class="item-info">
+                <input type="checkbox" ${item.purchased ? 'checked' : ''} title="Marcar como Comprado">
+                <div>
+                    <strong class="item-name ${item.purchased ? 'purchased' : ''}">${capitalize(item.name)}</strong>
+                    <br>
+                    <small class="item-date">Adicionado em: ${item.date_added}</small>
+                </div>
             </div>
             <div>
-                <button class="btn btn-success btn-sm me-2" title="Marcar como Comprado/Não Comprado">
-                    ${item.purchased ? '🔘' : '⭕'}
-                </button>
                 <button class="btn btn-secondary btn-sm me-2" title="Editar Item">✏️</button>
                 <button class="btn btn-danger btn-sm" title="Remover Item">🗑️</button>
             </div>
         `;
-        const [toggleButton, editButton, removeButton] = li.querySelectorAll('button');
+        const [checkbox, editButton, removeButton] = li.querySelectorAll('input, button');
 
         // Evento para alternar status de comprado
-        toggleButton.addEventListener('click', () => {
-            togglePurchased(item.id, li.querySelector('.item-name'));
+        checkbox.addEventListener('change', () => {
+            togglePurchased(item.id, checkbox);
         });
 
         // Evento para editar item
@@ -225,8 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(`${apiUrl}/suggestions?q=${encodeURIComponent(query)}`)
             .then(response => response.json())
             .then(suggestions => {
-                const filteredSuggestions = suggestions.filter(s => s.toLowerCase().startsWith(query));
-                showAutocomplete(filteredSuggestions);
+                showAutocomplete(suggestions);
             })
             .catch(error => {
                 console.error('Erro ao buscar sugestões:', error);

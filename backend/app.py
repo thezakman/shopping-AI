@@ -6,7 +6,7 @@ import os
 import logging
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "https://shopping-ai.onrender.com"}})
 
 DATA_FILE = 'data.json'
 COMMON_ITEMS_FILE = 'common_items.json'
@@ -17,18 +17,18 @@ logger = logging.getLogger(__name__)
 
 def load_data():
     try:
-        with open(DATA_FILE, 'r') as f:
+        with open(DATA_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
         return {"items": []}
 
 def save_data(data):
-    with open(DATA_FILE, 'w') as f:
+    with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 def load_common_items():
     try:
-        with open(COMMON_ITEMS_FILE, 'r') as f:
+        with open(COMMON_ITEMS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
         return []

@@ -10,13 +10,23 @@ h1 {
 
 .list-group-item {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
 }
 
 .list-group-item.purchased {
     text-decoration: line-through;
     opacity: 0.6;
+}
+
+.item-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.item-info input[type="checkbox"] {
+    transform: scale(1.2);
 }
 
 #autocomplete-list {
