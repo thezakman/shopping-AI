@@ -260,4 +260,49 @@ document.addEventListener('DOMContentLoaded', () => {
             debounceTimer = setTimeout(() => func.apply(context, args), delay);
         };
     }
+
+    // Função de autocomplete ao buscar por sugestão
+itemInput.addEventListener('input', debounce(fetchSuggestions, 300));
+
+function fetchSuggestions() {
+    const query = itemInput.value.trim().toLowerCase();
+    if (query.length === 0) {
+        clearAutocomplete();
+        return;
+    }
+
+    fetch(`${apiUrl}/suggestions?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(suggestions => {
+            showAutocomplete(suggestions);
+        })
+        .catch(error => {
+            console.error('Erro ao buscar sugestões:', error);
+        });
+}
+
+    // Exibir a lista de sugestões no autocomplete
+    function showAutocomplete(suggestions) {
+        clearAutocomplete();
+        if (suggestions.length === 0) return;
+    
+        suggestions.forEach(suggestion => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item list-group-item-action';
+            li.textContent = suggestion;
+            li.addEventListener('click', () => {
+                itemInput.value = suggestion;
+                clearAutocomplete();
+                itemInput.focus();
+            });
+            autocompleteList.appendChild(li);
+        });
+    }
+    
+    // Limpar a lista de autocomplete
+    function clearAutocomplete() {
+        autocompleteList.innerHTML = '';
+    }
+
+    
 });

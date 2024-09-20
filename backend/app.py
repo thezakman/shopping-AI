@@ -137,6 +137,33 @@ def update_or_delete_item(item_id):
         save_data(data)
         logger.info(f"Item removido: ID {item_id}")
         return jsonify({"message": "Item removido com sucesso."}), 200
+    
+@app.route('/suggestions', methods=['GET'])
+def suggestions():
+    try:
+        logger.info("Carregando dados e itens comuns...")
+        data = load_data()
+        common_items = load_common_items()  # Carregar itens comuns do arquivo JSON
+        item_names = [item['name'] for item in data['items']]
+
+        # Combina itens comuns com itens do histórico do usuário
+        combined_items = list(set(common_items + item_names))
+
+        # Filtrar com base na query fornecida pelo usuário
+        query = request.args.get('q', '').strip().lower()
+        if not query:
+            logger.warning("Nenhuma query fornecida para sugestões.")
+            return jsonify([])
+
+        # Filtra sugestões que começam com a query
+        filtered_suggestions = [item for item in combined_items if item.lower().startswith(query)]
+        logger.info(f"Sugestões filtradas para query '{query}': {filtered_suggestions}")
+
+        # Retornar as 10 primeiras sugestões
+        return jsonify(filtered_suggestions[:10])
+    except Exception as e:
+        logger.error(f"Erro ao gerar sugestões: {e}")
+        return jsonify({"message": "Erro interno no servidor."}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
