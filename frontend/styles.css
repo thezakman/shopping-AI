@@ -138,8 +138,8 @@ h1 {
 .item-date {
     font-size: 0.75rem;
     color: #b0b3b8;
-    text-align: right;
-    align-self: flex-end;
+    text-align: left;
+    align-self: flex-start;
     margin-top: 0.5rem;
 }
 
