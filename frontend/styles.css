@@ -196,7 +196,7 @@ h1 {
     margin: 1rem; /* Melhor espaçamento em telas pequenas */
 }
 
-#tag-cloud span {
+#tagCloud span {
     display: inline-block;
     margin: 5px;
     padding: 5px 10px;
@@ -207,7 +207,7 @@ h1 {
     color: #fff;
 }
 
-#tag-cloud span:hover {
+#tagCloud span:hover {
     background-color: #0056b3;
     transform: scale(1.1);
 }
