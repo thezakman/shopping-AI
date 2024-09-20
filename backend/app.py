@@ -120,12 +120,20 @@ def dynamic_suggestions():
 
         # Combinar sugestões
         final_suggestions = []
+
+        # Adicionar sugestões do histórico
         final_suggestions.extend([{'name': item['name'], 'occurrences': item.get('count', 1)} for item in suggestions])
+
+        # Adicionar combinações frequentes
         final_suggestions.extend([{'name': item, 'occurrences': 1} for item in frequent_combinations])
+
+        # Adicionar itens destacados
         final_suggestions.extend([{'name': item, 'occurrences': 1} for item in featured_items])
 
-        # Remover duplicatas e limitar a 10 sugestões no total
+        # Remover duplicatas
         unique_suggestions = {item['name']: item for item in final_suggestions}
+
+        # Converter de volta para lista e limitar a 10 sugestões
         return jsonify(list(unique_suggestions.values())[:10]), 200
     except Exception as e:
         logger.error(f"Erro ao gerar sugestões dinâmicas: {e}")
