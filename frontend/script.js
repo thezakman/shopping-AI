@@ -9,8 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Elementos do Modal de Edição
     const editItemModal = new bootstrap.Modal(document.getElementById('editItemModal'));
-    const editItemNameInput = document.getElementById('editItemName');
-    const editItemObservationInput = document.getElementById('editItemObservation');
+    const editItemName = document.getElementById('editItemName');
+    const editItemObservation = document.getElementById('editItemObservation');
     const saveEditButton = document.getElementById('saveEditButton');
     let currentEditItemId = null;
 
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addItemButton.addEventListener('click', () => {
         const item = itemInput.value.trim();
         if (item) {
-            const observation = ''; // Inicialmente sem observação
+            const observation = ''; // Observação vazia ao adicionar via input principal
             addItem(item, observation);
         }
     });
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const item = itemInput.value.trim();
             if (item) {
-                const observation = ''; // Inicialmente sem observação
+                const observation = ''; // Observação vazia ao adicionar via input principal
                 addItem(item, observation);
             }
         }
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
             if (status === 200) {
-                element.parentElement.remove();
+                element.remove();
                 showNotification('Item removido com sucesso!', 'success');
             } else {
                 showNotification(body.message || 'Erro ao remover item.', 'danger');
@@ -119,12 +119,13 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
             if (status === 200) {
+                const itemName = document.querySelector(`#item-${id} .item-name`);
                 if (body.purchased) {
                     checkbox.checked = true;
-                    checkbox.parentElement.parentElement.querySelector('.item-name').classList.add('purchased');
+                    itemName.classList.add('purchased');
                 } else {
                     checkbox.checked = false;
-                    checkbox.parentElement.parentElement.querySelector('.item-name').classList.remove('purchased');
+                    itemName.classList.remove('purchased');
                 }
                 showNotification('Status do item atualizado!', 'success');
             } else {
@@ -140,15 +141,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Função para editar item
     function editItem(id, currentName, currentObservation) {
         currentEditItemId = id;
-        editItemNameInput.value = currentName;
-        editItemObservationInput.value = currentObservation;
+        editItemName.value = currentName;
+        editItemObservation.value = currentObservation;
         editItemModal.show();
     }
 
     // Salvar edição de item
     saveEditButton.addEventListener('click', () => {
-        const newName = editItemNameInput.value.trim();
-        const newObservation = editItemObservationInput.value.trim();
+        const newName = editItemName.value.trim();
+        const newObservation = editItemObservation.value.trim();
         if (!newName) {
             showNotification('Nome do item não pode ser vazio.', 'warning');
             return;
@@ -165,9 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Atualizar o item na lista
                 const itemElement = document.getElementById(`item-${body.id}`);
                 if (itemElement) {
-                    itemElement.querySelector('.item-name').textContent = capitalize(body.name);
+                    itemElement.querySelector('.item-name').textContent = body.name;
                     itemElement.querySelector('.item-date').textContent = `Adicionado em: ${body.date_added}`;
-                    itemElement.querySelector('.item-observation').textContent = `Observação: ${body.observation}`;
+                    itemElement.querySelector('.item-observation').textContent = body.observation ? `Observação: ${body.observation}` : '';
                 }
                 showNotification('Item atualizado com sucesso!', 'success');
                 editItemModal.hide();
@@ -193,8 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <strong class="item-name ${item.purchased ? 'purchased' : ''}">${capitalize(item.name)}</strong>
                     <br>
                     <small class="item-date">Adicionado em: ${item.date_added}</small>
-                    <br>
-                    <small class="item-observation">Observação: ${item.observation || 'Nenhuma'}</small>
+                    <p class="item-observation">${item.observation ? `Observação: ${item.observation}` : ''}</p>
                 </div>
             </div>
             <div class="item-actions">

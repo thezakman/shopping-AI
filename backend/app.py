@@ -6,7 +6,7 @@ import os
 import logging
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "https://shopping-ai-1.onrender.com"}})
 
 DATA_FILE = 'data.json'
 COMMON_ITEMS_FILE = 'common_items.json'
@@ -20,6 +20,7 @@ def load_data():
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
+        logger.warning(f"{DATA_FILE} não encontrado. Criando novo arquivo.")
         return {"items": []}
     except json.JSONDecodeError as e:
         logger.error(f"Erro ao decodificar {DATA_FILE}: {e}")
@@ -30,14 +31,14 @@ def save_data(data):
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"Erro ao salvar dados: {e}")
+        logger.error(f"Erro ao salvar dados em {DATA_FILE}: {e}")
 
 def load_common_items():
     try:
         with open(COMMON_ITEMS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
-        logger.error(f"Arquivo {COMMON_ITEMS_FILE} não encontrado.")
+        logger.warning(f"{COMMON_ITEMS_FILE} não encontrado. Retornando lista vazia.")
         return []
     except json.JSONDecodeError as e:
         logger.error(f"Erro ao decodificar {COMMON_ITEMS_FILE}: {e}")
@@ -45,36 +46,36 @@ def load_common_items():
 
 @app.route('/')
 def index():
-    return jsonify({"message": "API da Lista de Compras Inteligente"})
+    return jsonify({"message": "API da Lista de Compras Inteligente"}), 200
 
 @app.route('/items', methods=['GET', 'POST'])
 def get_or_add_items():
     data = load_data()
 
     if request.method == 'GET':
-        return jsonify(data['items'])
+        return jsonify(data['items']), 200
 
     if request.method == 'POST':
-        item = request.json.get('item', '').strip()
+        item_name = request.json.get('item', '').strip()
         observation = request.json.get('observation', '').strip()
-        if not item:
+        if not item_name:
             return jsonify({"message": "Nome do item é obrigatório."}), 400
 
         # Verificar se o item já existe (case insensitive)
         for existing_item in data['items']:
-            if existing_item['name'].lower() == item.lower():
+            if existing_item['name'].lower() == item_name.lower():
                 return jsonify({"message": "Item já existe na lista."}), 400
 
         new_item = {
-            'id': len(data['items']) + 1,
-            'name': item,
+            'id': (max([itm['id'] for itm in data['items']], default=0) + 1),
+            'name': item_name,
             'date_added': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             'purchased': False,
             'observation': observation
         }
         data['items'].append(new_item)
         save_data(data)
-        logger.info(f"Item adicionado: {item}")
+        logger.info(f"Item adicionado: {item_name}")
         return jsonify(new_item), 201
 
 @app.route('/items/<int:item_id>', methods=['PUT', 'DELETE'])
@@ -134,15 +135,15 @@ def suggestions():
         
         query = request.args.get('q', '').strip().lower()
         if not query:
-            return jsonify([])
+            return jsonify([]), 200
 
         # Filtrar sugestões que começam com a query
         filtered_suggestions = [item for item in combined_items if item.lower().startswith(query)]
         # Limitar a 10 sugestões
-        return jsonify(filtered_suggestions[:10])
+        return jsonify(filtered_suggestions[:10]), 200
     except Exception as e:
         logger.error(f"Erro no endpoint /suggestions: {e}")
-        return jsonify({"message": "Erro interno do servidor."}), 500
+        return jsonify({"message": "Erro interno no servidor."}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
