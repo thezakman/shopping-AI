@@ -101,6 +101,7 @@ def generate_frequent_combinations(data):
     return list(set(frequent_combinations))[:10]
 
 # Função para retornar sugestões dinâmicas com base no histórico e nos itens destacados
+# Função para retornar sugestões dinâmicas com base no histórico e nos itens destacados
 @app.route('/dynamic_suggestions', methods=['GET'])
 def dynamic_suggestions():
     try:
@@ -119,15 +120,17 @@ def dynamic_suggestions():
 
         # Combinar sugestões
         final_suggestions = []
-        final_suggestions.extend([{'name': item['name'], 'occurrences': item['count']} for item in suggestions])
+        final_suggestions.extend([{'name': item['name'], 'occurrences': item.get('count', 1)} for item in suggestions])
         final_suggestions.extend([{'name': item, 'occurrences': 1} for item in frequent_combinations])
         final_suggestions.extend([{'name': item, 'occurrences': 1} for item in featured_items])
 
+        # Remover duplicatas e limitar a 10 sugestões no total
         unique_suggestions = {item['name']: item for item in final_suggestions}
         return jsonify(list(unique_suggestions.values())[:10]), 200
     except Exception as e:
         logger.error(f"Erro ao gerar sugestões dinâmicas: {e}")
         return jsonify({"message": "Erro interno no servidor."}), 500
+
 
 # Função para obter ou adicionar itens
 @app.route('/items', methods=['GET', 'POST'])
