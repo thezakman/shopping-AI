@@ -1,3 +1,5 @@
+import requests
+from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
@@ -5,10 +7,11 @@ from datetime import datetime
 import logging
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://shopping-ai-1.onrender.com"}})  # Corrigido para o frontend correto
+CORS(app, resources={r"/*": {"origins": "https://shopping-ai-1.onrender.com"}})
 
 DATA_FILE = 'data.json'
 COMMON_ITEMS_FILE = 'common_items.json'
+ZONASUL_URL = 'https://www.zonasul.com.br/5357?map=productClusterIds'
 
 # Configuração de Logging
 logging.basicConfig(level=logging.INFO)
@@ -31,161 +34,41 @@ def save_data(data):
     except Exception as e:
         logger.error(f"Erro ao salvar dados: {e}")
 
-def load_common_items():
+# Função para fazer scraping no Zona Sul e pegar os itens em destaque
+def get_featured_items():
     try:
-        with open(COMMON_ITEMS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        logger.warning(f"{COMMON_ITEMS_FILE} não encontrado. Retornando lista vazia.")
-        return []
-    except json.JSONDecodeError as e:
-        logger.error(f"Erro ao decodificar {COMMON_ITEMS_FILE}: {e}")
-        return []
+        # Fazer a requisição ao site
+        response = requests.get(ZONASUL_URL)
+        response.raise_for_status()  # Verifica erros
 
-@app.route('/')
-def index():
-    return jsonify({"message": "API da Lista de Compras Inteligente"})
+        # Usar BeautifulSoup para parsear o HTML
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-@app.route('/items', methods=['GET', 'POST'])
-def get_or_add_items():
-    data = load_data()
+        # Encontrar os artigos de produtos em destaque
+        featured_items = []
+        for article in soup.find_all('article', {'class': 'vtex-product-summary-2-x-element'}):
+            # Encontra o nome do produto dentro do artigo
+            name_tag = article.find('span', {'class': 'vtex-product-summary-2-x-productBrand'})
+            if name_tag:
+                name = name_tag.text.strip()
+                featured_items.append(name)
 
-    if request.method == 'GET':
-        return jsonify(data['items'])
-
-    if request.method == 'POST':
-        item = request.json.get('item', '').strip()
-        observation = request.json.get('observation', '').strip()  # Nova funcionalidade: observação
-        if not item:
-            return jsonify({"message": "Nome do item é obrigatório."}), 400
-
-        # Verificar se o item já existe (case insensitive)
-        for existing_item in data['items']:
-            if existing_item['name'].lower() == item.lower():
-                return jsonify({"message": "Item já existe na lista."}), 400
-
-        new_item = {
-            'id': len(data['items']) + 1,
-            'name': item,
-            'observation': observation,  # Adicionada observação
-            'date_added': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            'purchased': False
-        }
-        data['items'].append(new_item)
-        save_data(data)
-        logger.info(f"Item adicionado: {item}")
-        return jsonify(new_item), 201
-
-@app.route('/items/<int:item_id>', methods=['PUT', 'DELETE'])
-def update_or_delete_item(item_id):
-    data = load_data()
-    item = next((item for item in data['items'] if item['id'] == item_id), None)
-
-    if not item:
-        return jsonify({"message": "Item não encontrado."}), 404
-
-    if request.method == 'PUT':
-        new_name = request.json.get('name', '').strip()
-        observation = request.json.get('observation', '').strip()  # Permitir atualização da observação
-        if not new_name:
-            return jsonify({"message": "Nome do item é obrigatório."}), 400
-
-        # Verificar se o novo nome já existe (case insensitive)
-        for existing_item in data['items']:
-            if existing_item['name'].lower() == new_name.lower() and existing_item['id'] != item_id:
-                return jsonify({"message": "Outro item com esse nome já existe."}), 400
-
-        item['name'] = new_name
-        item['observation'] = observation  # Atualizar observação
-        save_data(data)
-        logger.info(f"Item atualizado: ID {item_id} para '{new_name}' com observação '{observation}'")
-        return jsonify(item), 200
-
-    if request.method == 'DELETE':
-        data['items'] = [itm for itm in data['items'] if itm['id'] != item_id]
-        save_data(data)
-        logger.info(f"Item removido: ID {item_id}")
-        return jsonify({"message": "Item removido com sucesso."}), 200
-
-@app.route('/toggle_purchased/<int:item_id>', methods=['PATCH'])
-def toggle_purchased(item_id):
-    data = load_data()
-    item = next((item for item in data['items'] if item['id'] == item_id), None)
-
-    if not item:
-        return jsonify({"message": "Item não encontrado."}), 404
-
-    item['purchased'] = not item['purchased']
-    save_data(data)
-    status = "comprado" if item['purchased'] else "não comprado"
-    logger.info(f"Item ID {item_id} marcado como {status}.")
-    return jsonify(item), 200
-
-@app.route('/suggestions', methods=['GET'])
-def suggestions():
-    try:
-        data = load_data()
-        common_items = load_common_items()
-        item_names = [item['name'] for item in data['items']]
-        
-        # Combine itens comuns com os adicionados pelo usuário
-        combined_items = list(set(common_items + item_names))
-        
-        query = request.args.get('q', '').strip().lower()
-        if not query:
-            return jsonify([])
-
-        # Filtrar sugestões que começam com a query
-        filtered_suggestions = [item for item in combined_items if item.lower().startswith(query)]
-        # Limitar a 10 sugestões
-        return jsonify(filtered_suggestions[:10])
+        return featured_items
     except Exception as e:
-        logger.error(f"Erro no endpoint /suggestions: {e}")
-        return jsonify({"message": "Erro interno no servidor."}), 500
-
-@app.route('/add_item', methods=['POST'])
-def add_item():
-    data = request.get_json()
-    item = data.get('item', '').strip().lower()
-    observation = data.get('observation', '').strip()
-
-    if not item:
-        return jsonify({"message": "Nome do item é obrigatório."}), 400
-
-    # Verificar se o item já existe
-    for existing_item in data['items']:
-        if existing_item['name'].lower() == item:
-            existing_item['count'] += 1  # Incrementar contador
-            return jsonify(existing_item), 200
-
-    new_item = {
-        'id': len(data['items']) + 1,
-        'name': item,
-        'observation': observation,
-        'date_added': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        'count': 1,  # Contador inicializado em 1
-        'purchased': False
-    }
-    data['items'].append(new_item)
-    save_data(data)
-    return jsonify(new_item), 201
-
-
-# Lista estática de combinações frequentes, organizadas por categorias de alimentos
-combinations = {
-    "leite": ["café", "açúcar", "achocolatado", "biscoitos"],
-    "pão": ["manteiga", "geleia", "queijo", "presunto"],
-    "arroz": ["feijão", "farinha", "óleo"],
-    "macarrão": ["molho de tomate", "queijo parmesão", "azeitona"],
-    "frango": ["batata", "cenoura", "temperos", "alho"],
-    # Adicione mais categorias de acordo com suas necessidades
-}
+        logger.error(f"Erro ao realizar scraping: {e}")
+        return []
 
 # Função para gerar combinações frequentes com base no histórico
 def generate_frequent_combinations(data):
+    combinations = {
+        "leite": ["café", "açúcar", "achocolatado", "biscoitos"],
+        "pão": ["manteiga", "geleia", "queijo", "presunto"],
+        "arroz": ["feijão", "farinha", "óleo"],
+        "macarrão": ["molho de tomate", "queijo parmesão", "azeitona"],
+        "frango": ["batata", "cenoura", "temperos", "alho"],
+    }
     frequent_combinations = []
 
-    # Contagem de co-ocorrência de itens
     item_occurrences = {}
     for item in data['items']:
         item_name = item['name'].lower()
@@ -194,51 +77,44 @@ def generate_frequent_combinations(data):
         else:
             item_occurrences[item_name] = 1
 
-    # Gerar sugestões com base em combinações estáticas e co-ocorrências dinâmicas
     for item, count in item_occurrences.items():
         if item in combinations:
-            # Adicionar os itens que costumam ser comprados com este item
             frequent_combinations.extend(combinations[item])
 
-        # Adicionar lógica de co-ocorrência
         for other_item, other_count in item_occurrences.items():
             if item != other_item and (count > 2 or other_count > 2):
-                # Itens que aparecem juntos com frequência
                 frequent_combinations.append(other_item)
 
-    # Remover duplicatas e limitar a 10 sugestões
     return list(set(frequent_combinations))[:10]
 
-# Modificando o endpoint para retornar combinações frequentes
-@app.route('/suggestions_based_on_history', methods=['GET'])
-def suggestions_based_on_history():
+# Endpoint para retornar sugestões dinâmicas com base no histórico e nos itens destacados
+@app.route('/suggestions_dynamic', methods=['GET'])
+def suggestions_dynamic():
     try:
+        # Carregar dados do histórico do usuário
         data = load_data()
 
-        # Itens mais frequentes
+        # Itens mais frequentes do histórico
         sorted_items = sorted(data['items'], key=lambda x: x.get('count', 0), reverse=True)
         suggestions = sorted_items[:5]
 
         # Gerar combinações frequentes
         frequent_combinations = generate_frequent_combinations(data)
 
-        # Combinar sugestões frequentes com combinações
+        # Pegar itens destacados do site Zona Sul
+        featured_items = get_featured_items()
+
+        # Combinar sugestões do histórico e combinações frequentes com os itens destacados
         final_suggestions = []
-        for item in suggestions:
-            final_suggestions.append(item)
-            # Adicionar as combinações frequentes
-            if item['name'].lower() in combinations:
-                final_suggestions.extend(combinations[item['name'].lower()])
-
-        # Adicionar combinações frequentes baseadas em co-ocorrências
+        final_suggestions.extend([item['name'] for item in suggestions])
         final_suggestions.extend(frequent_combinations)
+        final_suggestions.extend(featured_items)
 
-        # Limitar a 10 sugestões no total
-        return jsonify(final_suggestions[:10]), 200
+        # Remover duplicatas e limitar a 10 sugestões no total
+        return jsonify(list(set(final_suggestions))[:10]), 200
     except Exception as e:
-        logger.error(f"Error in /suggestions_based_on_history: {e}")
+        logger.error(f"Erro ao gerar sugestões dinâmicas: {e}")
         return jsonify({"message": "Erro interno no servidor."}), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True)

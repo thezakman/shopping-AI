@@ -272,21 +272,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Função para buscar sugestões com base no histórico
         document.getElementById('generateListButton').addEventListener('click', () => {
-            fetch(`${apiUrl}/suggestions_based_on_history`)
+            fetch(`${apiUrl}/suggestions_dynamic`)
                 .then(response => response.json())
                 .then(data => {
                     itemsList.innerHTML = ''; // Limpa a lista atual
                     data.forEach(item => {
-                        const li = createListItem(item); // Cria um item da lista
+                        const li = createListItem({name: item, date_added: new Date().toLocaleString()}); // Cria um item da lista
                         itemsList.appendChild(li);
                     });
-                    showNotification('Lista gerada com base no histórico!', 'success');
+                    showNotification('Lista gerada com base no histórico e destaques!', 'success');
                 })
                 .catch(error => {
                     showNotification('Erro ao gerar a lista.', 'danger');
                     console.error('Erro:', error);
                 });
-        });
+        });        
     
         function fetchSuggestions() {
             const query = itemInput.value.trim().toLowerCase();
