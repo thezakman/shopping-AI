@@ -196,7 +196,7 @@ h1 {
     margin: 1rem; /* Melhor espaçamento em telas pequenas */
 }
 
-#tagCloud span {
+#tag-cloud span {
     display: inline-block;
     margin: 5px;
     padding: 5px 10px;
@@ -207,7 +207,7 @@ h1 {
     color: #fff;
 }
 
-#tagCloud span:hover {
+#tag-cloud span:hover {
     background-color: #0056b3;
     transform: scale(1.1);
 }
@@ -224,6 +224,8 @@ h1 {
     font-size: 24px;
     font-weight: bold;
 }
+
+
 
 @media (max-width: 576px) {
     .list-group-item {

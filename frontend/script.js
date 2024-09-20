@@ -13,7 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveEditButton = document.getElementById('saveEditButton');
     let currentEditItemId = null;
 
+    // Carrega os itens na lista ao carregar a página
     loadItems();
+
+    // Gera a nuvem de tags ao carregar a página
+    generateTagCloud();
 
     // Adiciona novo item ao clicar no botão "Adicionar"
     addItemButton.addEventListener('click', () => {
@@ -33,16 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item) {
                 addItem(item, observation);
             }
-        }
-    });
-
-    // Autocomplete ao digitar no campo de item
-    itemInput.addEventListener('input', debounce(fetchSuggestions, 300));
-
-    // Limpar autocomplete ao clicar fora do campo
-    document.addEventListener('click', (e) => {
-        if (e.target !== itemInput) {
-            clearAutocomplete();
         }
     });
 
@@ -72,13 +66,12 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
-            if (status === 201) {
-                const li = createListItem(body);
-                itemsList.appendChild(li);
-                showNotification('Item adicionado com sucesso!', 'success');
+            if (status === 201 || status === 200) {
+                loadItems(); // Recarregar a lista de itens
+                generateTagCloud(); // Atualizar a nuvem de tags
                 itemInput.value = '';
                 clearAutocomplete();
-                fetchSuggestions();
+                showNotification('Item adicionado com sucesso!', 'success');
             } else {
                 showNotification(body.message || 'Erro ao adicionar item.', 'danger');
             }
@@ -98,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(({status, body}) => {
             if (status === 200) {
                 element.remove();
+                generateTagCloud(); // Atualizar a nuvem de tags
                 showNotification('Item removido com sucesso!', 'success');
             } else {
                 showNotification(body.message || 'Erro ao remover item.', 'danger');
@@ -118,13 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(({status, body}) => {
             if (status === 200) {
                 const itemElement = checkbox.closest('.list-group-item');
-                if (body.purchased) {
-                    checkbox.checked = true;
-                    itemElement.classList.add('purchased');
-                } else {
-                    checkbox.checked = false;
-                    itemElement.classList.remove('purchased');
-                }
+                itemElement.classList.toggle('purchased', body.purchased);
                 showNotification('Status do item atualizado!', 'success');
             } else {
                 showNotification(body.message || 'Erro ao atualizar status.', 'danger');
@@ -135,49 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Erro:', error);
         });
     }
-
-    // Editar item da lista
-    function editItem(id, currentName, currentObservation) {
-        currentEditItemId = id;
-        editItemInput.value = currentName;
-        editItemObservation.value = currentObservation;
-        editItemModal.show();
-    }
-
-    // Salvar edições no item
-    saveEditButton.addEventListener('click', () => {
-        const newName = editItemInput.value.trim();
-        const newObservation = editItemObservation.value.trim();
-        if (!newName) {
-            showNotification('Nome do item não pode ser vazio.', 'warning');
-            return;
-        }
-
-        fetch(`${apiUrl}/items/${currentEditItemId}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name: newName, observation: newObservation})
-        })
-        .then(response => response.json().then(data => ({status: response.status, body: data})))
-        .then(({status, body}) => {
-            if (status === 200) {
-                const itemElement = document.getElementById(`item-${body.id}`);
-                if (itemElement) {
-                    itemElement.querySelector('.item-name').textContent = body.name;
-                    itemElement.querySelector('.item-date').textContent = `Adicionado em: ${body.date_added}`;
-                    itemElement.querySelector('.item-observation').textContent = body.observation;
-                }
-                showNotification('Item atualizado com sucesso!', 'success');
-                editItemModal.hide();
-            } else {
-                showNotification(body.message || 'Erro ao atualizar item.', 'danger');
-            }
-        })
-        .catch(error => {
-            showNotification('Erro ao atualizar item.', 'danger');
-            console.error('Erro:', error);
-        });
-    });
 
     // Criar um item da lista
     function createListItem(item) {
@@ -214,8 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return li;
     }
 
-    // Função para buscar sugestões baseadas no histórico e nos itens destacados
-    document.getElementById('generateListButton').addEventListener('click', () => {
+    // Função para gerar a nuvem de tags
+    function generateTagCloud() {
         fetch(`${apiUrl}/dynamic_suggestions`)
             .then(response => response.json())
             .then(data => {
@@ -225,10 +170,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Gerar a nuvem de tags
                 data.forEach(item => {
                     const span = document.createElement('span');
-                    span.textContent = capitalize(item);
-                    span.className = getTagClass(item); // Define o tamanho da tag
+                    span.textContent = capitalize(item.name); // Adiciona o nome do item
+                    span.className = getTagClass(item.occurrences); // Define o tamanho da tag baseado na frequência
                     span.addEventListener('click', () => {
-                        addItem(item, '');
+                        addItem(item.name, '');
                     });
                     tagCloud.appendChild(span);
                 });
@@ -239,20 +184,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 showNotification('Erro ao gerar a nuvem de tags.', 'danger');
                 console.error('Erro:', error);
             });
-    });
-    
-    // Função para definir o tamanho da tag com base na frequência
-    function getTagClass(item) {
-        // Isso pode ser ajustado com base nos dados de frequência de uso
-        const size = Math.floor(Math.random() * 3); // Simula tamanhos diferentes
-        switch(size) {
-            case 0: return 'tag-small';
-            case 1: return 'tag-medium';
-            case 2: return 'tag-large';
-            default: return 'tag-small';
-        }
     }
-    
+
+    // Função para definir o tamanho da tag com base na frequência de uso
+    function getTagClass(occurrences) {
+        if (occurrences > 5) return 'tag-large';
+        if (occurrences > 2) return 'tag-medium';
+        return 'tag-small';
+    }
+
+    // Função para capitalizar strings
+    function capitalize(str) {
+        if (!str) return '';
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    // Exibir notificação na tela
+    function showNotification(message, type) {
+        notification.className = `alert alert-${type}`;
+        notification.textContent = message;
+        notification.classList.remove('d-none');
+        setTimeout(() => {
+            notification.classList.add('d-none');
+        }, 3000);
+    }
+
     // Função de autocomplete ao buscar por sugestão
     function fetchSuggestions() {
         const query = itemInput.value.trim().toLowerCase();
@@ -303,21 +259,5 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => func.apply(context, args), delay);
         };
-    }
-
-    // Função para capitalizar strings
-    function capitalize(str) {
-        if (!str) return '';
-        return str.charAt(0).toUpperCase() + str.slice(1);
-    }
-
-    // Exibir notificação na tela
-    function showNotification(message, type) {
-        notification.className = `alert alert-${type}`;
-        notification.textContent = message;
-        notification.classList.remove('d-none');
-        setTimeout(() => {
-            notification.classList.add('d-none');
-        }, 3000);
     }
 });
