@@ -1,3 +1,5 @@
+<!-- frontend/index.html -->
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -10,11 +12,38 @@
 <body>
     <div class="container my-5">
         <h1 class="text-center mb-4">Lista de Compras Inteligente</h1>
-        <div class="input-group mb-3">
+        
+        <!-- Área de Notificações -->
+        <div id="notification" class="alert d-none" role="alert"></div>
+        
+        <!-- Input para Adicionar Item -->
+        <div class="input-group mb-3 position-relative">
             <input type="text" id="itemInput" class="form-control" placeholder="Adicionar item" autocomplete="off">
             <button class="btn btn-primary" id="addItemButton">Adicionar</button>
+            <ul id="autocomplete-list" class="list-group position-absolute w-100"></ul>
         </div>
+        
+        <!-- Lista de Itens -->
         <ul class="list-group" id="itemsList"></ul>
+    </div>
+
+    <!-- Modal para Editar Item -->
+    <div class="modal fade" id="editItemModal" tabindex="-1" aria-labelledby="editItemModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editItemModalLabel">Editar Item</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <input type="text" id="editItemInput" class="form-control" placeholder="Novo nome do item">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="saveEditButton">Salvar Alterações</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Bootstrap JS e dependências -->
