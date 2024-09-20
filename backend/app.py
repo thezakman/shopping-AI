@@ -8,6 +8,7 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "https://shopping-ai-1.onrender.com"}})
 
 DATA_FILE = 'data.json'
+COMMON_ITEMS_FILE = 'common_items.json'
 
 # Configuração de Logging
 logging.basicConfig(level=logging.INFO)
@@ -24,26 +25,34 @@ def load_data():
         logger.error(f"Erro ao decodificar {DATA_FILE}: {e}")
         return {"items": []}
 
-# Função para salvar os dados no arquivo JSON
-def save_data(data):
+# Função para carregar os itens comuns de um arquivo JSON
+def load_common_items():
     try:
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-    except Exception as e:
-        logger.error(f"Erro ao salvar dados: {e}")
+        with open(COMMON_ITEMS_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data.get('common_items', [])
+    except FileNotFoundError:
+        logger.warning(f"{COMMON_ITEMS_FILE} não encontrado. Retornando lista vazia.")
+        return []
+    except json.JSONDecodeError as e:
+        logger.error(f"Erro ao decodificar {COMMON_ITEMS_FILE}: {e}")
+        return []
 
-# Função para gerar sugestões dinâmicas com base no histórico do usuário
+# Função para gerar sugestões dinâmicas com base no histórico do usuário e itens comuns
 @app.route('/dynamic_suggestions', methods=['GET'])
 def dynamic_suggestions():
     try:
         logger.info("Carregando dados do histórico do usuário...")
         data = load_data()
 
+        # Itens comuns que podem ser sugeridos
+        common_items = load_common_items()
+
         # Ordenar os itens mais usados no histórico com base no campo 'count'
         sorted_items = sorted(data['items'], key=lambda x: x.get('count', 0), reverse=True)
         
-        # Gerar a lista de top 10 itens mais usados
-        top_items = sorted_items[:10]
+        # Se o histórico for pequeno, incluir itens comuns como sugestão
+        top_items = sorted_items[:10] if len(sorted_items) >= 10 else sorted_items + [{'name': item, 'count': 0} for item in common_items[:10 - len(sorted_items)]]
 
         # Remover duplicatas e formatar para resposta
         final_suggestions = [{'name': item['name'], 'occurrences': item.get('count', 1)} for item in top_items]
@@ -89,6 +98,14 @@ def get_or_add_items():
         logger.info(f"Item adicionado: {item}")
         return jsonify(new_item), 201
 
+# Função para salvar os dados no arquivo JSON
+def save_data(data):
+    try:
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"Erro ao salvar dados: {e}")
+
 # Função para atualizar ou deletar um item
 @app.route('/items/<int:item_id>', methods=['PUT', 'DELETE'])
 def update_or_delete_item(item_id):
@@ -120,21 +137,6 @@ def update_or_delete_item(item_id):
         save_data(data)
         logger.info(f"Item removido: ID {item_id}")
         return jsonify({"message": "Item removido com sucesso."}), 200
-
-# Função para marcar item como comprado ou não comprado
-@app.route('/toggle_purchased/<int:item_id>', methods=['PATCH'])
-def toggle_purchased(item_id):
-    data = load_data()
-    item = next((item for item in data['items'] if item['id'] == item_id), None)
-
-    if not item:
-        return jsonify({"message": "Item não encontrado."}), 404
-
-    item['purchased'] = not item['purchased']
-    save_data(data)
-    status = "comprado" if item['purchased'] else "não comprado"
-    logger.info(f"Item ID {item_id} marcado como {status}.")
-    return jsonify(item), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
