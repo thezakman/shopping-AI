@@ -183,6 +183,34 @@ h1 {
     border-top: none;
 }
 
+#tagCloud span {
+    display: inline-block;
+    margin: 5px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #007aff;
+    color: #fff;
+}
+
+#tagCloud span:hover {
+    background-color: #0056b3;
+}
+
+.tag-small {
+    font-size: 12px;
+}
+
+.tag-medium {
+    font-size: 18px;
+}
+
+.tag-large {
+    font-size: 24px;
+    font-weight: bold;
+}
+
 @media (max-width: 576px) {
     .list-group-item {
         flex-direction: column;

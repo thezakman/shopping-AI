@@ -219,18 +219,40 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(`${apiUrl}/dynamic_suggestions`)
             .then(response => response.json())
             .then(data => {
-                itemsList.innerHTML = ''; // Limpa a lista atual
+                const tagCloud = document.getElementById('tagCloud');
+                tagCloud.innerHTML = ''; // Limpa a nuvem atual
+    
+                // Gerar a nuvem de tags
                 data.forEach(item => {
-                    const li = createListItem({name: item, date_added: new Date().toLocaleString()}); // Cria um item da lista
-                    itemsList.appendChild(li);
+                    const span = document.createElement('span');
+                    span.textContent = capitalize(item);
+                    span.className = getTagClass(item); // Define o tamanho da tag
+                    span.addEventListener('click', () => {
+                        addItem(item, '');
+                    });
+                    tagCloud.appendChild(span);
                 });
-                showNotification('Lista gerada com base no histórico e destaques!', 'success');
+    
+                showNotification('Nuvem de tags gerada com sucesso!', 'success');
             })
             .catch(error => {
-                showNotification('Erro ao gerar a lista.', 'danger');
+                showNotification('Erro ao gerar a nuvem de tags.', 'danger');
                 console.error('Erro:', error);
             });
     });
+    
+    // Função para definir o tamanho da tag com base na frequência
+    function getTagClass(item) {
+        // Isso pode ser ajustado com base nos dados de frequência de uso
+        const size = Math.floor(Math.random() * 3); // Simula tamanhos diferentes
+        switch(size) {
+            case 0: return 'tag-small';
+            case 1: return 'tag-medium';
+            case 2: return 'tag-large';
+            default: return 'tag-small';
+        }
+    }
+    
     
 
     // Função de autocomplete ao buscar por sugestão
