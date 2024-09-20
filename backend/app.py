@@ -160,7 +160,7 @@ def get_or_add_items():
         # Verificar se o item já existe (case insensitive)
         for existing_item in data['items']:
             if existing_item['name'].lower() == item.lower():
-                return jsonify({"message": "Item já existe na lista."}), 400
+                return jsonify({"message": f"O item '{item}' já existe na lista."}), 400
 
         new_item = {
             'id': len(data['items']) + 1,
@@ -173,6 +173,7 @@ def get_or_add_items():
         save_data(data)
         logger.info(f"Item adicionado: {item}")
         return jsonify(new_item), 201
+
 
 # Função para atualizar ou deletar um item
 @app.route('/items/<int:item_id>', methods=['PUT', 'DELETE'])
