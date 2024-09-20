@@ -36,30 +36,6 @@ def save_data(data):
     except Exception as e:
         logger.error(f"Erro ao salvar dados: {e}")
 
-# Função para fazer scraping no Zona Sul e pegar os itens em destaque
-def get_featured_items():
-    try:
-        # Fazer a requisição ao site
-        response = requests.get(ZONASUL_URL)
-        response.raise_for_status()  # Verifica erros
-
-        # Usar BeautifulSoup para parsear o HTML
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        # Encontrar os artigos de produtos em destaque
-        featured_items = []
-        for article in soup.find_all('article', {'class': 'vtex-product-summary-2-x-element'}):
-            # Encontra o nome do produto dentro do artigo
-            name_tag = article.find('span', {'class': 'vtex-product-summary-2-x-productBrand'})
-            if name_tag:
-                name = name_tag.text.strip()
-                featured_items.append(name)
-
-        return featured_items
-    except Exception as e:
-        logger.error(f"Erro ao realizar scraping: {e}")
-        return []
-
 # Função para carregar itens comuns do arquivo JSON
 def load_common_items():
     try:
@@ -72,9 +48,31 @@ def load_common_items():
         logger.error(f"Erro ao decodificar {COMMON_ITEMS_FILE}: {e}")
         return []
 
+# Função para fazer scraping no Zona Sul e pegar os itens em destaque
+def get_featured_items():
+    try:
+        response = requests.get(ZONASUL_URL, timeout=10)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        featured_items = []
+        for item in soup.select('span.vtex-product-summary-2-x-productBrand'):
+            name = item.text.strip()
+            featured_items.append(name)
+
+        if not featured_items:
+            logger.warning("Nenhum item destacado encontrado.")
+        return featured_items
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro na conexão ao realizar scraping: {e}")
+        return []
+    except Exception as e:
+        logger.error(f"Erro ao realizar scraping: {e}")
+        return []
+
 # Função para gerar combinações frequentes com base no histórico
 def generate_frequent_combinations(data):
-    # Combinações estáticas definidas manualmente
     combinations = {
         "leite": ["café", "açúcar", "achocolatado", "biscoitos"],
         "pão": ["manteiga", "geleia", "queijo", "presunto"],
@@ -82,7 +80,7 @@ def generate_frequent_combinations(data):
         "macarrão": ["molho de tomate", "queijo parmesão", "azeitona"],
         "frango": ["batata", "cenoura", "temperos", "alho"],
     }
-    
+
     frequent_combinations = []
     item_occurrences = {}
 
@@ -96,37 +94,28 @@ def generate_frequent_combinations(data):
         if item in combinations:
             frequent_combinations.extend(combinations[item])
 
-        # Sugestões dinâmicas baseadas na frequência de co-ocorrência
         for other_item, other_count in item_occurrences.items():
             if item != other_item and (count > 2 or other_count > 2):
                 frequent_combinations.append(other_item)
 
-    # Remover duplicatas e limitar a 10 sugestões
     return list(set(frequent_combinations))[:10]
-
 
 # Função para retornar sugestões dinâmicas com base no histórico e nos itens destacados
 @app.route('/dynamic_suggestions', methods=['GET'])
 def dynamic_suggestions():
     try:
         logger.info("Carregando dados do histórico do usuário...")
-        # Carregar dados do histórico do usuário
         data = load_data()
-        logger.info(f"Dados carregados: {data}")
 
         # Itens mais frequentes do histórico
-        logger.info("Gerando sugestões com base no histórico...")
         sorted_items = sorted(data['items'], key=lambda x: x.get('count', 0), reverse=True)
         suggestions = sorted_items[:5]
 
         # Gerar combinações frequentes
-        logger.info("Gerando combinações frequentes...")
         frequent_combinations = generate_frequent_combinations(data)
 
         # Pegar itens destacados do site Zona Sul
-        logger.info("Obtendo itens destacados do Zona Sul...")
         featured_items = get_featured_items()
-        logger.info(f"Itens destacados: {featured_items}")
 
         # Combinar sugestões
         final_suggestions = []
@@ -134,14 +123,11 @@ def dynamic_suggestions():
         final_suggestions.extend([{'name': item, 'occurrences': 1} for item in frequent_combinations])
         final_suggestions.extend([{'name': item, 'occurrences': 1} for item in featured_items])
 
-        # Remover duplicatas e limitar a 10 sugestões no total
         unique_suggestions = {item['name']: item for item in final_suggestions}
         return jsonify(list(unique_suggestions.values())[:10]), 200
     except Exception as e:
         logger.error(f"Erro ao gerar sugestões dinâmicas: {e}")
         return jsonify({"message": "Erro interno no servidor."}), 500
-
-
 
 # Função para obter ou adicionar itens
 @app.route('/items', methods=['GET', 'POST'])
@@ -173,7 +159,6 @@ def get_or_add_items():
         save_data(data)
         logger.info(f"Item adicionado: {item}")
         return jsonify(new_item), 201
-
 
 # Função para atualizar ou deletar um item
 @app.route('/items/<int:item_id>', methods=['PUT', 'DELETE'])
@@ -231,7 +216,6 @@ def suggestions():
         common_items = load_common_items()
         item_names = [item['name'] for item in data['items']]
 
-        # Combine itens comuns com os adicionados pelo usuário
         combined_items = list(set(common_items + item_names))
 
         query = request.args.get('q', '').strip().lower()
@@ -239,7 +223,6 @@ def suggestions():
             logger.warning("Nenhuma query fornecida para sugestões.")
             return jsonify([])
 
-        # Filtrar sugestões que começam com a query
         filtered_suggestions = [item for item in combined_items if item.lower().startswith(query)]
         logger.info(f"Sugestões filtradas para query '{query}': {filtered_suggestions}")
 
@@ -247,7 +230,6 @@ def suggestions():
     except Exception as e:
         logger.error(f"Erro no endpoint /suggestions: {e}")
         return jsonify({"message": "Erro interno no servidor."}), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True)
