@@ -29,14 +29,23 @@ def load_data():
 def load_common_items():
     try:
         with open(COMMON_ITEMS_FILE, 'r', encoding='utf-8') as f:
+            # Carregar o arquivo JSON que contém uma lista de itens
             data = json.load(f)
-            return data.get('common_items', [])
+            if isinstance(data, dict):
+                # Verifique se é um dicionário, por exemplo: {"common_items": [...]}
+                return data.get('common_items', [])
+            elif isinstance(data, list):
+                # Se for uma lista diretamente, retorne-a
+                return data
+            else:
+                return []
     except FileNotFoundError:
         logger.warning(f"{COMMON_ITEMS_FILE} não encontrado. Retornando lista vazia.")
         return []
     except json.JSONDecodeError as e:
         logger.error(f"Erro ao decodificar {COMMON_ITEMS_FILE}: {e}")
         return []
+
 
 # Função para gerar sugestões dinâmicas com base no histórico do usuário e itens comuns
 @app.route('/dynamic_suggestions', methods=['GET'])
@@ -143,7 +152,7 @@ def suggestions():
     try:
         logger.info("Carregando dados e itens comuns...")
         data = load_data()
-        common_items = load_common_items()  # Carregar itens comuns do arquivo JSON
+        common_items = load_common_items()  # Carregar itens comuns corretamente
         item_names = [item['name'] for item in data['items']]
 
         # Combina itens comuns com itens do histórico do usuário
