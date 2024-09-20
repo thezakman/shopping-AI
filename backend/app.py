@@ -173,11 +173,16 @@ def add_item():
 
 @app.route('/suggestions_based_on_history', methods=['GET'])
 def suggestions_based_on_history():
-    data = load_data()
-    # Ordenar os itens pelo número de vezes que foram adicionados
-    most_frequent_items = sorted(data['items'], key=lambda x: x['count'], reverse=True)
-    # Retornar os 5 itens mais frequentes
-    return jsonify(most_frequent_items[:5]), 200
+    try:
+        data = load_data()
+        # Sort items by count (descending order)
+        sorted_items = sorted(data['items'], key=lambda x: x.get('count', 0), reverse=True)
+        # Limit suggestions to top 5 items
+        suggestions = sorted_items[:5]
+        return jsonify(suggestions), 200
+    except Exception as e:
+        logger.error(f"Error in /suggestions_based_on_history: {e}")
+        return jsonify({"message": "Erro interno no servidor."}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
