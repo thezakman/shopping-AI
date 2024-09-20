@@ -1,4 +1,4 @@
-const apiUrl = 'https://shopping-ai.onrender.com'; // URL do backend no Render
+const apiUrl = 'https://shopping-ai.onrender.com'; // URL do backend correto
 
 document.addEventListener('DOMContentLoaded', () => {
     const itemInput = document.getElementById('itemInput');
@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Elementos do Modal de Edição
     const editItemModal = new bootstrap.Modal(document.getElementById('editItemModal'));
-    const editItemName = document.getElementById('editItemName');
+    const editItemInput = document.getElementById('editItemInput');
     const editItemObservation = document.getElementById('editItemObservation');
     const saveEditButton = document.getElementById('saveEditButton');
     let currentEditItemId = null;
@@ -20,8 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Adicionar item ao clicar no botão
     addItemButton.addEventListener('click', () => {
         const item = itemInput.value.trim();
+        const observation = ''; // Observação vazia ao adicionar via input principal
         if (item) {
-            const observation = ''; // Observação vazia ao adicionar via input principal
             addItem(item, observation);
         }
     });
@@ -31,8 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') {
             e.preventDefault();
             const item = itemInput.value.trim();
+            const observation = ''; // Observação vazia ao adicionar via input principal
             if (item) {
-                const observation = ''; // Observação vazia ao adicionar via input principal
                 addItem(item, observation);
             }
         }
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
             if (status === 200) {
-                element.remove();
+                element.parentElement.remove();
                 showNotification('Item removido com sucesso!', 'success');
             } else {
                 showNotification(body.message || 'Erro ao remover item.', 'danger');
@@ -119,13 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
             if (status === 200) {
-                const itemName = document.querySelector(`#item-${id} .item-name`);
                 if (body.purchased) {
                     checkbox.checked = true;
-                    itemName.classList.add('purchased');
+                    checkbox.parentElement.parentElement.querySelector('.item-name').classList.add('purchased');
                 } else {
                     checkbox.checked = false;
-                    itemName.classList.remove('purchased');
+                    checkbox.parentElement.parentElement.querySelector('.item-name').classList.remove('purchased');
                 }
                 showNotification('Status do item atualizado!', 'success');
             } else {
@@ -141,14 +140,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Função para editar item
     function editItem(id, currentName, currentObservation) {
         currentEditItemId = id;
-        editItemName.value = currentName;
+        editItemInput.value = currentName;
         editItemObservation.value = currentObservation;
         editItemModal.show();
     }
 
     // Salvar edição de item
     saveEditButton.addEventListener('click', () => {
-        const newName = editItemName.value.trim();
+        const newName = editItemInput.value.trim();
         const newObservation = editItemObservation.value.trim();
         if (!newName) {
             showNotification('Nome do item não pode ser vazio.', 'warning');
@@ -168,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (itemElement) {
                     itemElement.querySelector('.item-name').textContent = body.name;
                     itemElement.querySelector('.item-date').textContent = `Adicionado em: ${body.date_added}`;
-                    itemElement.querySelector('.item-observation').textContent = body.observation ? `Observação: ${body.observation}` : '';
+                    itemElement.querySelector('.item-observation').textContent = body.observation;
                 }
                 showNotification('Item atualizado com sucesso!', 'success');
                 editItemModal.hide();
@@ -190,14 +189,13 @@ document.addEventListener('DOMContentLoaded', () => {
         li.innerHTML = `
             <div class="item-info">
                 <input type="checkbox" ${item.purchased ? 'checked' : ''} title="Marcar como Comprado">
-                <div>
+                <div class="item-details">
                     <strong class="item-name ${item.purchased ? 'purchased' : ''}">${capitalize(item.name)}</strong>
-                    <br>
+                    ${item.observation ? `<span class="item-observation">${capitalize(item.observation)}</span>` : ''}
                     <small class="item-date">Adicionado em: ${item.date_added}</small>
-                    <p class="item-observation">${item.observation ? `Observação: ${item.observation}` : ''}</p>
                 </div>
             </div>
-            <div class="item-actions">
+            <div>
                 <button class="btn btn-secondary btn-sm me-2" title="Editar Item">✏️</button>
                 <button class="btn btn-danger btn-sm" title="Remover Item">🗑️</button>
             </div>
@@ -233,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(`${apiUrl}/suggestions?q=${encodeURIComponent(query)}`)
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Erro ao buscar sugestões.');
+                    throw new Error('Erro na requisição de sugestões.');
                 }
                 return response.json();
             })

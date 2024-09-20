@@ -2,11 +2,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 from datetime import datetime
-import os
 import logging
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://shopping-ai-1.onrender.com"}})
+CORS(app, resources={r"/*": {"origins": "https://shopping-ai-1.onrender.com"}})  # Corrigido para o frontend correto
 
 DATA_FILE = 'data.json'
 COMMON_ITEMS_FILE = 'common_items.json'
@@ -20,7 +19,6 @@ def load_data():
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
-        logger.warning(f"{DATA_FILE} não encontrado. Criando novo arquivo.")
         return {"items": []}
     except json.JSONDecodeError as e:
         logger.error(f"Erro ao decodificar {DATA_FILE}: {e}")
@@ -31,7 +29,7 @@ def save_data(data):
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"Erro ao salvar dados em {DATA_FILE}: {e}")
+        logger.error(f"Erro ao salvar dados: {e}")
 
 def load_common_items():
     try:
@@ -46,36 +44,36 @@ def load_common_items():
 
 @app.route('/')
 def index():
-    return jsonify({"message": "API da Lista de Compras Inteligente"}), 200
+    return jsonify({"message": "API da Lista de Compras Inteligente"})
 
 @app.route('/items', methods=['GET', 'POST'])
 def get_or_add_items():
     data = load_data()
 
     if request.method == 'GET':
-        return jsonify(data['items']), 200
+        return jsonify(data['items'])
 
     if request.method == 'POST':
-        item_name = request.json.get('item', '').strip()
-        observation = request.json.get('observation', '').strip()
-        if not item_name:
+        item = request.json.get('item', '').strip()
+        observation = request.json.get('observation', '').strip()  # Nova funcionalidade: observação
+        if not item:
             return jsonify({"message": "Nome do item é obrigatório."}), 400
 
         # Verificar se o item já existe (case insensitive)
         for existing_item in data['items']:
-            if existing_item['name'].lower() == item_name.lower():
+            if existing_item['name'].lower() == item.lower():
                 return jsonify({"message": "Item já existe na lista."}), 400
 
         new_item = {
-            'id': (max([itm['id'] for itm in data['items']], default=0) + 1),
-            'name': item_name,
+            'id': len(data['items']) + 1,
+            'name': item,
+            'observation': observation,  # Adicionada observação
             'date_added': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            'purchased': False,
-            'observation': observation
+            'purchased': False
         }
         data['items'].append(new_item)
         save_data(data)
-        logger.info(f"Item adicionado: {item_name}")
+        logger.info(f"Item adicionado: {item}")
         return jsonify(new_item), 201
 
 @app.route('/items/<int:item_id>', methods=['PUT', 'DELETE'])
@@ -88,7 +86,7 @@ def update_or_delete_item(item_id):
 
     if request.method == 'PUT':
         new_name = request.json.get('name', '').strip()
-        new_observation = request.json.get('observation', '').strip()
+        observation = request.json.get('observation', '').strip()  # Permitir atualização da observação
         if not new_name:
             return jsonify({"message": "Nome do item é obrigatório."}), 400
 
@@ -98,9 +96,9 @@ def update_or_delete_item(item_id):
                 return jsonify({"message": "Outro item com esse nome já existe."}), 400
 
         item['name'] = new_name
-        item['observation'] = new_observation
+        item['observation'] = observation  # Atualizar observação
         save_data(data)
-        logger.info(f"Item atualizado: ID {item_id} para '{new_name}'")
+        logger.info(f"Item atualizado: ID {item_id} para '{new_name}' com observação '{observation}'")
         return jsonify(item), 200
 
     if request.method == 'DELETE':
@@ -135,12 +133,12 @@ def suggestions():
         
         query = request.args.get('q', '').strip().lower()
         if not query:
-            return jsonify([]), 200
+            return jsonify([])
 
         # Filtrar sugestões que começam com a query
         filtered_suggestions = [item for item in combined_items if item.lower().startswith(query)]
         # Limitar a 10 sugestões
-        return jsonify(filtered_suggestions[:10]), 200
+        return jsonify(filtered_suggestions[:10])
     except Exception as e:
         logger.error(f"Erro no endpoint /suggestions: {e}")
         return jsonify({"message": "Erro interno no servidor."}), 500
