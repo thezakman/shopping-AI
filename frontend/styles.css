@@ -34,6 +34,39 @@ h1 {
     background-color: #0056b3;
 }
 
+.input-group {
+    position: relative;
+    z-index: 1000;
+}
+
+#autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1001;
+}
+
+#autocomplete-list .list-group-item {
+    border: none;
+    border-bottom: 1px solid #f2f2f7;
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+#autocomplete-list .list-group-item:last-child {
+    border-bottom: none;
+}
+
+#autocomplete-list .list-group-item:hover {
+    background-color: #f2f2f7;
+}
+
 .list-group-item {
     display: flex;
     align-items: center;
@@ -133,7 +166,7 @@ h1 {
     top: 20px;
     right: 20px;
     min-width: 200px;
-    z-index: 1000;
+    z-index: 2000;
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
