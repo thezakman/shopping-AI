@@ -1,4 +1,4 @@
-const apiUrl = 'https://shopping-ai.onrender.com/'; // Atualize para o URL do seu backend no deploy
+const apiUrl = 'https://shopping-ai-backend.onrender.com';
 
 document.addEventListener('DOMContentLoaded', () => {
     const itemInput = document.getElementById('itemInput');
